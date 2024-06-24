@@ -1,1 +1,15 @@
 data/rotowire/
+data/CPL/
+data/e2e/
+raw/
+preprocess/CPL_Processor/preprocess.log
+preprocess/
+Mixed_IE/further_processed/regulation/
+Mixed_IE/further_processed/statistic
+
+Mixed_IE/regulation/__pycache__/
+Mixed_IE/statistic/zh/__pycache__
+Mixed_IE/statistic/en/__pycache__
+
+Mixed_IE/statistic/en/statistic_wikibio.log
+Mixed_IE/statistic/en/statistic.log
