@@ -1,6 +1,14 @@
 __pycache__/
 Mixed_IE/__pycache__/
 
+TKGT/KGs/.ipynb_checkpoints/
+
+
+Mixed_IE/llm/not_important
+Mixed_IE/llm/main.ipynb
+Mixed_IE/llm/responses_history.py
+Mixed_IE/llm/__pycache__
+
 data/rotowire/
 data/CPL/
 data/e2e/
@@ -16,3 +24,5 @@ Mixed_IE/statistic/en/__pycache__
 
 Mixed_IE/statistic/en/statistic_wikibio.log
 Mixed_IE/statistic/en/statistic.log
+
+Mixed_IE/statistic/Similarity.pdf

@@ -16,16 +16,17 @@ import concurrent
 from concurrent.futures import ProcessPoolExecutor
 
 import sys
-sys.path.insert(0, os.path.dirname( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ))))
-from kgs.dataset_kgs.e2e_rotowire_field import fields_list_rotowire, fields_list_e2e
-from kgs.dataset_kgs.CPL_field import fields_list_CPL
-from kgs.dataset_kgs.wiki_field import fields_list_wikitabletext, fields_list_wikibio
+_ROOT_PATH = os.path.dirname( os.path.dirname( os.path.dirname( os.path.abspath(__file__) )))
+sys.path.insert(0, _ROOT_PATH)
+from KGs.dataset_kgs.e2e_rotowire_field import fields_list_rotowire, fields_list_e2e
+from KGs.dataset_kgs.CPL_field import fields_list_CPL
+from KGs.dataset_kgs.wiki_field import fields_list_wikitabletext, fields_list_wikibio
 
 
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
-model_name_or_path="/home/jiangpeiwen2/jiangpeiwen2/workspace/LLMs/bce-embedding-base_v1"     # 中英双语https://github.com/netease-youdao/BCEmbedding/blob/master/README_zh.md
+model_name_or_path="xxx/bce-embedding-base_v1"     # 中英双语https://github.com/netease-youdao/BCEmbedding/blob/master/README_zh.md
 device = 'cpu'
-root_path = "/home/jiangpeiwen2/jiangpeiwen2/text-kgs-table/components/mix_ie/further_processed/statistic/"
+root_path = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/statistic/")
 file_list = ["rotowire", "e2e", "wikitabletext", "CPL", "wikibio"]  # , 
 file_name = "freq_all.json"
 fields_list = [fields_list_rotowire, fields_list_e2e,  fields_list_wikitabletext, fields_list_CPL, fields_list_wikibio]

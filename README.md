@@ -11,3 +11,12 @@ As for the CPL dataset, as the original data involves privacy, we only provide p
 
 ## "Data"
 There are three datasets in table form stored in the "Data" directory from total five, and the remaining two (wikibio, wikitabletext) have no limited table fields. For details, please refer to the readme file in the "data" directory.
+
+# Mixed_IE
+The method of TKGT's first stage, which include paradigms of regulation, statistics, and DL.
+
+# KGs
+The semi-automatically constructed Knowledge Graph of datasets by human experts with the help of Mixed_IE.
+
+# Hybird-RAG
+Waiting...

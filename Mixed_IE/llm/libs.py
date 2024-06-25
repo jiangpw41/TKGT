@@ -214,7 +214,7 @@ from openai import OpenAI
 
 client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = "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"
+  api_key = "xxx"
 )
 
 
