@@ -86,7 +86,6 @@ def get_fields( ):
 
 def _merge():
     with open('saves.pkl', 'rb') as f:  
-        # 使用pickle.dump()将列表写入文件  
         data = pickle.load(f)
     for _dataset in _DATASET:
         _all = []

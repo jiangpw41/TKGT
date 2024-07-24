@@ -14,14 +14,19 @@ import hanlp
 from collections import Counter, OrderedDict
 import torch.multiprocessing as mp
 
-sys.path.insert(0, os.path.dirname( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ))))
-from config import _ROOT_PATH, _POS_FILTER_zh, _STOPWORDS
-from functions import read_text_to_list
-from regulation.regulation_lib import regulations
 
+_ROOT_PATH = os.path.dirname( os.path.dirname( os.path.dirname( os.path.dirname( os.path.abspath(__file__) ))))
+sys.path.insert(0, _ROOT_PATH)
+from utils import create_logger
+
+from Mixed_IE.config import _ROOT_PATH, _POS_FILTER_zh, _STOPWORDS
+from Mixed_IE.functions import read_text_to_list
+from Mixed_IE.regulation.regulation_lib import regulations
+
+logger = create_logger( "preprocess_log", os.path.join(_ROOT_PATH, "Mixed_IE/mixed_ie.log"))
 
 class Statistic_Methods():
-    def __init__(sefl, texts):
+    def __init__(self, texts):
         pass
     # 统计一个单词在一篇文档中出现的次数
     @classmethod
@@ -59,9 +64,10 @@ class Statistic_Methods():
         total_dict["TT_freq"] = temp
         with open( dict_all_path, 'w', encoding='utf-8') as file:
             json.dump(total_dict, file, ensure_ascii=False, indent=4)
+
     @classmethod
     def count_tokens_and_filter(cls):
-        _target_path = "/home/jiangpeiwen2/jiangpeiwen2/text-kgs-table/components/mix_ie/further_processed/statistic/CPL"
+        _target_path = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/statistic/CPL" )
         part_list = ["Core", "Procedure", "Appendix"]
         total_tokens = 0
         for part in part_list:
@@ -85,10 +91,7 @@ class Statistic_Methods():
         totals = data2["TT_freq"]
         for key in totals:
             total_tokens_filter += totals[key]
-        print(f"Total words {total_tokens}, filter {total_tokens_filter}")
-
-
-
+        logger.info(f"Statistics CPL: Total words {total_tokens}, filter {total_tokens_filter}")
 
 class _HANLP_CUSTOM():
     def __init__(self, _STOPWORDS, dict_combine=None, dict_force=None):
@@ -114,7 +117,7 @@ class _HANLP_CUSTOM():
 
         # custom
         self.stopwords = _STOPWORDS
-        self.save_path = os.path.join( _ROOT_PATH, "components/mix_ie/further_processed/statistic/CPL")
+        self.save_path = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/statistic/CPL")
 
     def filter( self, tokens: List[ List[str] ], pos: List[ List[str] ]):
         # 过滤停用词，并抽取特定词性
@@ -129,6 +132,10 @@ class _HANLP_CUSTOM():
     # 完整性工程：分词、分句、词性标注、命名实体识别
     def Completeness(self, texts: List[List[str]], part):
         sub_path = os.path.join( self.save_path, part)
+        if not os.path.exists(sub_path):  
+            # 如果目录不存在，则创建它  
+            os.makedirs(sub_path)
+            logger.info( f"Statistics CPL: have created path for {part}.")
         ret = OrderedDict()
         for key in _POS_FILTER_zh:
             if key not in ["CD", "NT", "FW"]:              #在全集层面统计基数词、时间名词、外来词（英文符号等）没有意义 
@@ -171,10 +178,10 @@ class _HANLP_CUSTOM():
         return ret
     
     def main(self):
-        # 打开block分块的处理数据
-        with open( os.path.join( _ROOT_PATH, "components/mix_ie/further_processed/regulation/para_splited_1.json"), 'r', encoding='utf-8') as file:
+        # 使用regulation步骤处理完毕的数据
+        with open( os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/regulation/para_splited_B.json"), 'r', encoding='utf-8') as file:
             data = json.load(file)
-
+        # （1）程序性信息列表
         procedure = []
         for i in range( len(data) ):
             temp = []
@@ -184,12 +191,12 @@ class _HANLP_CUSTOM():
             #temp.extend( data[ str(i) ][ "正文" ]["附录"] )
             procedure.append( temp )
         self.Completeness( procedure, "Procedure")
-
+        # （2）核心申辩证信息列表
         core = []
         for i in range( len(data) ):
             core.append( data[ str(i) ][ "正文" ]["申辩证"] )
         self.Completeness( core, "Core")
-
+        # （3）附录信息列表
         appendix = []
         for i in range( len(data) ):
             appendix.append( data[ str(i) ]["附录"] )
@@ -230,19 +237,19 @@ if __name__ == "__main__":
     current_start_method = mp.get_start_method(allow_none=True)
     if current_start_method != 'spawn':
         mp.set_start_method('spawn', force=True)
+
+    sta_path = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/statistic/CPL" )
     if not os.path.exists(os.path.join(sta_path, "CPL")):  
         # 如果目录不存在，则创建它  
         os.makedirs(os.path.join(sta_path, "CPL"))
-    '''
+        logger.info( "Statistics: have created path for CPL.")
+    
     processor = _HANLP_CUSTOM( _STOPWORDS )
     processor.main()
-    '''
-    dict_all_path = "/home/jiangpeiwen2/jiangpeiwen2/text-kgs-table/components/mix_ie/further_processed/statistic/CPL/freq_all.json"
+    logger.info( f"Statistics CPL: each position tag completed.")
+    dict_all_path = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/statistic/CPL/freq_all.json" )
     merged_key = ["NR", "NN", "VV", "AD", "JJ", "No_pos_tag"]  # 除去数量词和时间名词
     Statistic_Methods.merge_ordered_dict( dict_all_path, merged_key)
-    
-    
-    
-    
+    logger.info( f"Statistics CPL: merging all position tag.")
     Statistic_Methods.count_tokens_and_filter()
     

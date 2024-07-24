@@ -122,10 +122,15 @@ def _split_wikibio_train():
         texts[14*len(texts)//16 : 15*len(texts)//16],
         texts[15*len(texts)//16 : ],
     ]
+    split_path =  os.path.join(_DATA_PATH, f"wikibio/train_splited")
+    if not os.path.exists(split_path):  
+        # 如果目录不存在，则创建它  
+        os.makedirs(split_path) 
     for i in range(16):
-        with open( os.path.join(_DATA_PATH, f"wikibio/train_splited/wikibio_train_part_{i}.text"), 'w', encoding='utf-8') as file:
+        with open( os.path.join(split_path, f"wikibio_train_part_{i}.txt"), 'w', encoding='utf-8') as file:
             for j in range(len(lists[i])):
                 file.write(lists[i][j])
+    print( "Statistics: Splitting the large wikibio into 16 parts.")
 
 def _statistic(_dataset, _type, logger, index=None):
     if index==None:
@@ -196,14 +201,15 @@ def _merge( dataset_path, logger ):
     logger.info( f"{os.path.basename(dataset_path)}: total words={all_dicts['_Overview']['Total words']}, total lens={all_dicts['_Overview']['Lines']}, total filtered words={all_dicts['_Overview']['Total words after filter']}, average words={all_dicts['_Overview']['Average_words_Line']}")
 
 def main_wikibio():
+    print("当前脚本的进程号是:", os.getpid())
     logger = create_logger("Statistic", os.path.join(_IE_PATH, "statistic/en/statistic_wikibio.log"), level=1)
     _dataset = 'wikibio'
-    for i in range(2,3):
+    for i in range(3):
         _type = _TYPES[i]
         if _type != 'train':
              _statistic(_dataset, _type, logger)   
         else:
-            for i in range(14,16):   # 进程机制问题，每隔几个需要手动重启
+            for i in range(16):   # 进程机制问题，每隔几个需要手动重启
                 _statistic(_dataset, _type, logger, i)
     _merge( os.path.join(_SAVE_Path, _dataset), logger )
     
@@ -239,6 +245,6 @@ if __name__=="__main__":
         # 如果目录不存在，则创建它  
         os.makedirs(os.path.join(sta_path, "wikitabletext"))
 
-    main_other()
+    #main_other()
     _split_wikibio_train()
     main_wikibio()

@@ -4,10 +4,14 @@ import json
 from typing import List
 import re
 
-sys.path.insert(0, os.path.dirname( os.path.dirname( os.path.abspath(__file__) )))       # 将mix_id加入工作目录
-from config import _ROOT_PATH, _POS_FILTER_zh
-from functions import read_text_to_list
-from regulation.regulation_lib import _SEPARATORS
+_ROOT_PATH = os.path.dirname( os.path.dirname( os.path.dirname( os.path.abspath(__file__) )) )
+sys.path.insert(0, _ROOT_PATH)       # 将根加入工作目录
+from utils import create_logger
+from Mixed_IE.config import _ROOT_PATH, _POS_FILTER_zh
+from Mixed_IE.functions import read_text_to_list
+from Mixed_IE.regulation.regulation_lib import _SEPARATORS
+
+logger = create_logger( "preprocess_log", os.path.join(_ROOT_PATH, "Mixed_IE/mixed_ie.log"))
 
 def Firstlevel(original_string:str, separators:list = _SEPARATORS, index = None):  
     _SPECIAL_SEPARATOR = "<SJTU_IEEE_LAW>"
@@ -214,11 +218,12 @@ def main( ):
     dirs = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/regulation")
     if not os.path.exists(dirs):  
         # 如果目录不存在，则创建它  
-        os.makedirs(dirs)  
+        os.makedirs(dirs)
+        logger.info( "Regulation: have created path of regulation results for further processing.")
     data_path = os.path.join(_ROOT_PATH, "data/CPL/text")
     if not os.path.exists(data_path):  
         # 如果目录不存在，则创建它  
-        raise FileNotFoundError(f"Directory '{directory_path}' does not exist.")
+        raise FileNotFoundError(f"Directory '{data_path}' does not exist.")
     texts = read_text_to_list( data_path )
 
     # （1）拆分标题、正文、附录等
@@ -226,26 +231,27 @@ def main( ):
     for i in range(len(texts)):
         saves[i] = Firstlevel(texts[i], _SEPARATORS, i)
 
-    with open( os.path.join( dirs, 'para_splited.json'), 'w', encoding='utf-8') as file:
+    with open( os.path.join( dirs, 'para_splited_A.json'), 'w', encoding='utf-8') as file:
         json.dump(saves, file, ensure_ascii=False, indent=4)
-    
+    logger.info( "Regulation: have splitted each document into four major parts.")
+
     # （2）拆分正文
-    with open( os.path.join( dirs, 'para_splited.json'), 'r', encoding='utf-8') as file:
+    with open( os.path.join( dirs, 'para_splited_A.json'), 'r', encoding='utf-8') as file:
         data = json.load(file)
-    
     ret = Secondlevel( data )
-    with open( os.path.join( dirs, 'para_splited_1.json'), 'w', encoding='utf-8') as file:
+    with open( os.path.join( dirs, 'para_splited_B.json'), 'w', encoding='utf-8') as file:
         json.dump(ret, file, ensure_ascii=False, indent=4)
-    
+    logger.info( "Regulation: have splitted each document's main content into three parts.")
+
     #（3）提取申辩证
-    with open( os.path.join( dirs, 'para_splited_1.json'), 'r', encoding='utf-8') as file:
+    with open( os.path.join( dirs, 'para_splited_B.json'), 'r', encoding='utf-8') as file:
         data = json.load(file)
     savess = {}
     for i in range( len(data) ):
         savess[i] = data[str(i)]["正文"]["申辩证"]
-    with open( os.path.join( dirs, 'para_splited_sbz.json'), 'w', encoding='utf-8') as file:
+    with open( os.path.join( dirs, 'para_splited_C.json'), 'w', encoding='utf-8') as file:
         json.dump(savess, file, ensure_ascii=False, indent=4)
+    logger.info( "Regulation: have extracted each document's main content's core part.")
 
 if __name__ == "__main__":
-
     main( )
