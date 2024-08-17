@@ -8,6 +8,8 @@ model_selected = 'gpt-4o' # if use gpt series model, set model name here and ope
 
 qr_model_selected = 'gpt-4o'
 is_model_selected = 'gpt-4o'
+ie_model_selected = 'gpt-4o'
+cuda_device = 'cuda:0'
 
 
 import pandas as pd
@@ -20,21 +22,19 @@ from components.kgs.dataset_kgs.CPL_field import fields_list_CPL
 import json
 from components.kgs.dataset_kgs.CPL_kg import key_role_dict_naive
 
-
-file_path = f'../../data/CPL/text'
+file_path = f'../../data/e2e/train.text'
 
 ##########
 
 sys_prompt_ie_text = """
-您是一位有帮助的人工智能助手，会根据用户的要求从用户提供的文本中准确提取信息，并用中文如实回答所有问题。
-"""
+You are a helpful AI assistant who will accurately extract information from the text provided by the user based on the user’s requirements, and truthfully answer all questions in English."""
 
 sys_prompt_ie = {"role": "system", "content": sys_prompt_ie_text}
 
 ##########
 
 sys_prompt_is_text = """
-您是一位有帮助的人工智能助手，会根据用户的要求从用户提供的文本中准确总结与用户问题有关的信息，并用中文如实回答。
+You are a helpful AI assistant who will accurately summarize information related to the user’s questions from the text provided by the user, and truthfully answer in English.
 """
 
 sys_prompt_is = {"role": "system", "content": sys_prompt_is_text}
@@ -42,51 +42,64 @@ sys_prompt_is = {"role": "system", "content": sys_prompt_is_text}
 ##########
 
 sys_prompt_qr_text = """
-您是一位有帮助的人工智能助手，会根据用户的要求和用户问题有关的信息写出query用来检索有用信息，你会用中文回答。
-"""
+You are a helpful AI assistant who will write a query to retrieve useful information based on the user’s requirements and questions, and you will answer in English."""
 
 sys_prompt_qr = {"role": "system", "content": sys_prompt_qr_text}
 
-# Reading the file line by line and storing each line in a list
 lines = []
 with open(file_path, 'r', encoding='utf-8') as file:
     for line in file:
         lines.append(line.strip())
-lines[0]
 
 
-# In[7]:
-
-
-file_path = '../../data/CPL/table_processed.json'
+file_path = '../../data/e2e/train.xlsx'
 # Load data from the JSON file
-with open(file_path, 'r', encoding='utf-8') as file:
-    table_data = json.load(file)
+table_data = pd.read_excel(file_path)
+table_data = table_data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 
-incontext_example_template="""
-角色: {ROLE}
-属性: {FIELD}
-相关背景: {RELATED_CONTEXT}
-值范围: {SCOPE}
-问题: {FIELD}的取值是什么?
-回答: {ANSWER}
+# ### Preparing Incontext Example from Training Data
+
+
+ie_prompt_extract_role_name_e2e_template= """
+You are a useful table content filling assistant that can extract the attribute field values of the role based on the row and column values provided by the user, as well as their corresponding paragraph original text, from the original text.
+1. Check if the provided paragraph contains the attribute values corresponding to the role. If not, respond 'Bad Infomation'.
+2. If the relevant paragraph contains attribute values for the role, respond the value according to the given requirements.
+3. Respond to the user's question like the examples provided below:
+
+{EXAMPLE1}
+
+{EXAMPLE2}
+
+Below is the usr's question:
+    Attribute: {FIELD}
+    Related Context: {RELATED_CONTEXT}
+    Question: What's the {FIELD} of {ROLE}?
+    Answer:
+
 """
 
 
-incontext_question_template="""
-角色: {ROLE}
-属性: {FIELD}
-相关背景: {RELATED_CONTEXT}
-值范围: {SCOPE}
-问题: {FIELD}的取值是什么?
-回答: 
+ie_example_template = """
+Attribute: {FIELD}
+Related Context:  {CONTEXT}
+Question: What's the {FIELD} of {ARRT}?
+Attribute Values: {VALUE_RANGE}
+Answer: {ANSWER}
+"""
+
+
+ie_question_template = """
+Attribute: {FIELD}
+Related Context:  {CONTEXT}
+Question: What's the {FIELD} of {ARRT}?
+Attribute Values: {VALUE_RANGE}
+Answer:
 """
 
 incontext_examples_docs = []
 
 splitter = SpecialSubStringTextSplitter(SP_Str_List, "backward")
-
 
 def process_na(value):
     if pd.isna(value):
@@ -98,33 +111,21 @@ def process_na(value):
     else:
         return value
 
+from components.kgs.dataset_kgs.e2e_rotowire_field import fields_list_rotowire, fields_list_e2e
 
-for i in tqdm(range(3), desc='files'):
-    text = lines[i].replace("\\n", "\n")
-    segments_backward = splitter.split(text, 'backward')
-    
-    doc_store = DocStore(preprocessor=preprocessor,
-                        doc_data = SplittedList2Doc(segments_backward))
-    doc_store.init_retriever()
-    doc_store.create_pipeline()
-    
-    reference_table = table_data[i]
-    
-    for query in reference_table.keys():
-        try:
-            query_docs = doc_store.retrieve(query,
-                                        sparse_top_k = 5, 
-                                        dense_top_k = 5, 
-                                        join_top_k = 5, 
-                                        reranker_topk = 1)[0].content
-            role = key_role_dict_naive[query]['role']
-            scope = key_role_dict_naive[query]['value_range']
-            search_value = process_na(reference_table[query])
-            incontext_example = incontext_example_template.format(ROLE=role, FIELD=query, SCOPE=scope, RELATED_CONTEXT=query_docs, ANSWER=search_value)
-            incontext_examples_docs.append(incontext_example)
-        except Exception as e:
-            print(f"Warning: {e}")
+fields = fields_list_e2e['Table1']['Fields']
 
+ARRT = 'Restaurant'
+
+for i in tqdm(range(len(lines)), desc='tables'):
+    context = lines[i]
+    row = table_data.iloc[i,:]
+    for key, value in fields.items():
+        attribute = key
+        value_range = value
+        answer = row[key]
+        ie_example = ie_example_template.format(FIELD=attribute, CONTEXT=context, ARRT=ARRT, VALUE_RANGE=value_range, ANSWER=process_na(answer))
+        incontext_examples_docs.append(ie_example)
 
 incontext_docstore = DocStore(preprocessor=preprocessor, doc_data = SplittedList2Doc(incontext_examples_docs))
 incontext_docstore.init_retriever()
@@ -143,11 +144,11 @@ def get_between_colon_and_newline(result):
     """
     Return the string between ':' and '\n'.
     """
-    start_index = result.find('回答:')
+    start_index = result.find('Answer:')
     if start_index == -1:
         return "NA"
     
-    start_index += len('回答:')
+    start_index += len('Answer:')
     end_index = result.find('\n', start_index)
     
     if end_index == -1:
@@ -269,9 +270,9 @@ class KnowledgeGraph:
         """
         if search_entity in self.graph:
             entity_data = self.graph.nodes[search_entity]
-            entity_name = self.graph.nodes[search_entity][search_entity+'姓名名称']
+            entity_name = self.graph.nodes[search_entity]['Name']
             if entity_name is None:
-                return search_entity+'姓名名称'
+                return 'Name'
             unfilled_labels = [label for label, value in entity_data.items() if value is None]
             if unfilled_labels:
                 return random.choice(unfilled_labels)
@@ -307,7 +308,7 @@ class KnowledgeGraph:
         
         neighbors = list(self.graph.neighbors(entity))
         if neighbors:
-            description += "有向关系:\n"
+            description += "Direct:\n"
             for neighbor in neighbors:
                 description += f"    {neighbor}:\n"
                 neighbor_data = self.graph.nodes[neighbor]
@@ -319,7 +320,7 @@ class KnowledgeGraph:
         return description
 
     def get_entity_name(self, entity):
-        return self.graph.nodes[entity][entity+'姓名名称']
+        return self.graph.nodes[entity]['Name']
 
     def return_data_cpl(self):
         cells = []
@@ -366,10 +367,7 @@ def visualize_knowledge_graph_interactive(kg):
     fig.show()
 
 
-# ### Initiate LLM
-
 from components.models.LLM import LLM
-
 import httpx
 from openai import OpenAI
 
@@ -383,75 +381,69 @@ def extract_answer(text):
     else:
         return None
 
-openai_key = 'your openai api key'
+
+openai_key = 'your key here'
 
 client = OpenAI(
     api_key = openai_key,
 )
 
+
 # ### TKGT Prompt & Model
 
+
 qr_prompt_extract_value_template="""
-你是一个有用的可以根据用户提供的行值和列值帮助用户写出查询问题的query从而从原文中提取角色的属性字段值的ai助手，你只返回query文本，不会返回文字解释等其他文本。
+You are a helpful AI assistant that can help the user write a query based on the row and column values provided, in order to extract the attribute value of a character from the original text. You will only return the query text and will not provide any additional explanations or other text.
 
-你使用的检索器是: {RetrieverName}
+The retriever you are using is: {RetrieverName}
 
-以下是用户的问题：
-角色: {ROLE}
-属性: {FIELD}
-相关背景: {RELATED_CONTEXT}
-问题: {FIELD}的取值是什么?
-查询query:
+Here is the user's question:
+- Role: {ROLE}
+- Attribute: {FIELD}
+- Relevant Background: {RELATED_CONTEXT}
+- Question: What is the value of {FIELD}?
+- Query:
 """
 
 is_prompt_extract_value_template="""
-你是一个有用的信息总结助手，可以根据用户提供的行值和列值以及其对应的原文段落，从已知信息中提取有用信息并转述成简短精确的总结。
+You are a helpful information summarization assistant. You can extract useful information from the provided known information and rephrase it into a brief and precise summary, based on the row values and column values given by the user along with the corresponding original text.
 
-以下是用户的问题：
-角色: {ROLE}
-属性: {FIELD}
-相关背景: {RELATED_CONTEXT}
-值范围: {SCOPE}
-问题: {FIELD}的取值是什么?
+Here is the user's question:
+- Role: {ROLE}
+- Attribute: {FIELD}
+- Relevant Background: {RELATED_CONTEXT}
+- Value Range: {SCOPE}
+- Question: What is the value of {FIELD}?
 
-以下是已知信息:
-{KGREP}
+Below is the known information:
+- {KGREP}
 
-请从已知信息中提取有用信息并转述成简短精确的总结:
-总结:
+Please extract useful information from the known information and rephrase it into a brief and precise summary:
+- Summary:
 """
-
 
 ie_prompt_extract_value_template="""
-你是一个有用的表格内容填充助手，可以根据用户提供的行值和列值以及其对应的原文段落，从原文中提取角色的属性字段值。
+You are a helpful assistant for filling in table content. You can extract attribute values of a character from the original text based on the row and column values provided by the user.
 
-检查提供的段落是否包含对应角色的属性值。如果没有，回答'Bad Information'。
-如果相关段落包含角色的属性值，按照给定的要求回答值。
-按照下面提供的例子回答用户的问题：
+Check if the provided paragraph contains the attribute value of the corresponding character. If not, answer 'Bad Information.'
+If the relevant paragraph contains the attribute value of the character, answer with the value according to the given requirements.
 
-{InContextExp1}
+Answer the user's question according to the examples provided below:
 
-{InContextExp2}
+- {InContextExp1}
 
-以下是用户的问题：
-角色: {ROLE}
-属性: {FIELD}
-相关背景: {RELATED_CONTEXT}
-值范围: {SCOPE}
-问题: {FIELD}的取值是什么?
-回答:
+- {InContextExp2}
+
+Here is the user's question:
+- Role: {ROLE}
+- Attribute: {FIELD}
+- Relevant Background: {RELATED_CONTEXT}
+- Value Range: {SCOPE}
+- Question: What is the value of {FIELD}?
+- Answer:
 """
 
 
-def extract_query(text):
-    answer_keyword = "查询query"
-    start_index = text.find(answer_keyword)
-    
-    if start_index != -1:
-        start_index += len(answer_keyword)
-        return text[start_index:].strip()
-    else:
-        return None
 
 qr_model = LLM(model_name = qr_model_selected, 
                device=cuda_device, 
@@ -459,128 +451,84 @@ qr_model = LLM(model_name = qr_model_selected,
                sys_prompt=sys_prompt_qr)
 
 
-def extract_summary(text):
-    answer_keyword = "总结:"
-    start_index = text.find(answer_keyword)
-    
-    if start_index != -1:
-        start_index += len(answer_keyword)
-        return text[start_index:].strip()
-    else:
-        return None
-
 is_model = LLM(model_name = is_model_selected, 
                device=cuda_device, 
                client=client, 
                sys_prompt=sys_prompt_is)
 
 
-def extract_answer(text):
-    answer_keyword = "回答:"
-    start_index = text.find(answer_keyword)
-    
-    if start_index != -1:
-        start_index += len(answer_keyword)
-        return text[start_index:].strip()
-    else:
-        return None
-
-
-is_model = LLM(model_name = ie_model_selected, 
+ie_model = LLM(model_name = ie_model_selected, 
                device=cuda_device, 
                client=client, 
                sys_prompt=sys_prompt_is)
-# ### Construct a KG
+
+
+file_path = '../../data/e2e/test.text'
+lines = []
+with open(file_path, 'r', encoding='utf-8') as file:
+    for line in file:
+        lines.append(line.strip())
+
+
+file_path = '../../data/e2e/test.xlsx'
+# Load data from the JSON file
+table_data = pd.read_excel(file_path)
+table_data = table_data.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
 RN = 'Hybrid Retriever: all-MiniLM-L12-v2 + BM25'
-
-entitie_name = ['法院', '出借人（原告）', '借款人（被告）', '担保人（被告）', '其他诉讼参与人']
+entitie_name = ['Restaurant']
 
 cells = []
 
-for i in tqdm(range(450, len(lines)),desc='tables'):
+for i in tqdm(range(len(lines)), desc='Tables'):
+    ### Construct a KG
+    e2e_kg = KnowledgeGraph()
     
     text = lines[i].replace("\\n", "\n")
-    segments_backward = splitter.split(text, 'backward')
-    
-    doc_store = DocStore(preprocessor=preprocessor,
-                        doc_data = SplittedList2Doc(segments_backward))
-    doc_store.init_retriever()
-    doc_store.create_pipeline()
-    cpl_kg = KnowledgeGraph()
-    reference_table = table_data[i]
-    
+    reference_table = table_data.iloc[i, :]
+    reference_table
     for entity in entitie_name:
         entity_columns = {}
-        for key, value in reference_table.items():
-            if entity in key:
-                entity_columns[key] = None
-        cpl_kg.add_entity(entity, entity_columns)
-    cpl_kg.add_relationship('法院', '出借人（原告）', {"审理关系": '审理'})
-    cpl_kg.add_relationship('法院', '借款人（被告）', {"审理关系": '审理'})
-    cpl_kg.add_relationship('法院', '担保人（被告）', {"审理关系": '审理'})
-    cpl_kg.add_relationship('法院', '其他诉讼参与人', {"审理关系": '审理'})
-    cpl_kg.add_relationship('出借人（原告）', '法院', {"审理关系": '被审理'})
-    cpl_kg.add_relationship('出借人（原告）', '借款人（被告）', {"审理关系": '起诉'})
-    cpl_kg.add_relationship('出借人（原告）', '担保人（被告）', {"审理关系": '起诉'})
-    cpl_kg.add_relationship('出借人（原告）', '其他诉讼参与人', {"审理关系": '被验证'}) 
-    cpl_kg.add_relationship('借款人（被告）', '法院', {"审理关系": '被审理'})
-    cpl_kg.add_relationship('借款人（被告）', '借款人（被告）', {"审理关系": '被起诉'})
-    cpl_kg.add_relationship('借款人（被告）', '担保人（被告）', {"审理关系": '被担保借款'})
-    cpl_kg.add_relationship('借款人（被告）', '其他诉讼参与人', {"审理关系": '被验证借款'})    
-    cpl_kg.add_relationship('担保人（被告）', '法院', {"审理关系": '被审理'})
-    cpl_kg.add_relationship('担保人（被告）', '借款人（被告）', {"审理关系": '担保借款'})
-    cpl_kg.add_relationship('担保人（被告）', '出借人（原告）', {"审理关系": '被起诉借款'})
-    cpl_kg.add_relationship('担保人（被告）', '其他诉讼参与人', {"审理关系": '被验证'})    
-    cpl_kg.add_relationship('其他诉讼参与人', '出借人（原告）', {"审理关系": '验证'})
-    cpl_kg.add_relationship('其他诉讼参与人', '借款人（被告）', {"审理关系": '验证'})
-    cpl_kg.add_relationship('其他诉讼参与人', '担保人（被告）', {"审理关系": '验证'})
-    cpl_kg.add_relationship('其他诉讼参与人', '法院', {"审理关系": '被审理'})
-    
+        for key, value in fields.items():
+            entity_columns[key] = None
+        e2e_kg.add_entity(entity, entity_columns)
     
     while True:
         # Get search target
-        search_entity = cpl_kg.get_search_entity()
+        search_entity = e2e_kg.get_search_entity()
         if not search_entity:
             break
-        search_label = cpl_kg.get_random_unfilled_label(search_entity)
+        search_label = e2e_kg.get_random_unfilled_label(search_entity)
         if not search_label:
             break
-        search_entity_name = cpl_kg.get_entity_name(search_entity)
+        search_entity_name = e2e_kg.get_entity_name(search_entity)
         print(f"Retrieving {search_label} of {search_entity}")
-        query_init = search_label
         
-        query_docs = doc_store.retrieve(query_init,
-                                    sparse_top_k = 5, 
-                                    dense_top_k = 5, 
-                                    join_top_k = 5, 
-                                    reranker_topk = 1)[0].content
-        role = key_role_dict_naive[search_label]['role']
-        scope = key_role_dict_naive[search_label]['value_range']
+        role = search_entity
+        scope = fields[search_label]
         
-        qr_prompt_instance = qr_prompt_extract_value_template.format(RetrieverName=RN, ROLE=search_entity, FIELD=query_init, SCOPE=scope, RELATED_CONTEXT=query_docs)
+        ie_question = ie_question_template.format(FIELD=search_label, CONTEXT=text, 
+                                                  ARRT=ARRT, VALUE_RANGE=scope)
         
-        query_raw = qr_model.generate(qr_prompt_instance, max_new_tokens=64)
-        
-        incontext_example1 = incontext_docstore.retrieve(query_init,
-                                    sparse_top_k = 5, 
-                                    dense_top_k = 5, 
-                                    join_top_k = 5, 
-                                    reranker_topk = 1)[0].content
-        incontext_example2 = incontext_docstore.retrieve(query_raw,
-                                    sparse_top_k = 5, 
-                                    dense_top_k = 5, 
-                                    join_top_k = 5, 
-                                    reranker_topk = 1)[0].content
-        kg_rep = '{}信息: {}'.format(search_entity, cpl_kg.describe_entity(search_entity))
-        
-        is_prompt_instance = is_prompt_extract_value_template.format(RetrieverName=RN, ROLE=search_entity, FIELD=query_init, SCOPE=scope, RELATED_CONTEXT=query_docs, KGREP = kg_rep)
-        kg_is_raw = is_model.generate(is_prompt_instance, max_new_tokens=1024)
-        role_value_prompt = ie_prompt_extract_value_template.format(InContextExp1=incontext_example1, InContextExp2=incontext_example2, ROLE=role, FIELD=query, SCOPE=scope, RELATED_CONTEXT=query_docs+"已知信息总结:"+kg_is_raw)
-        role_value_answer = reference_table[query_init]
-        search_value = ie_model.generate(role_value_prompt, max_new_tokens=1024)
-        cpl_kg.update_entity(search_entity, search_label, search_value)
+        inc_examples = incontext_docstore.retrieve(ie_question,
+                                sparse_top_k = 5, 
+                                dense_top_k = 5, 
+                                join_top_k = 5, 
+                                reranker_topk = 2)
+        incontext_example1 = inc_examples[0].content
+        incontext_example2 = inc_examples[1].content
+        kg_rep = '{}信息: {}'.format(search_entity, e2e_kg.describe_entity(search_entity))
+        is_prompt_instance = is_prompt_extract_value_template.format(RetrieverName=RN, ROLE=search_entity, FIELD=search_label, SCOPE=scope, RELATED_CONTEXT=text, KGREP = kg_rep)
+        kg_is_raw = is_model.generate(is_prompt_instance, max_new_tokens=32)
+        role_value_prompt = ie_prompt_extract_value_template.format(InContextExp1=incontext_example1, InContextExp2=incontext_example2, 
+                                                                    ROLE=search_entity, FIELD=search_label, SCOPE=scope, 
+                                                                    RELATED_CONTEXT=text+kg_is_raw)
+        role_value_answer = reference_table[search_label]
+        search_value = ie_model.generate(role_value_prompt, max_new_tokens=64)
+        e2e_kg.update_entity(search_entity, search_label, search_value)
         cells.append({'pred': search_value, 'groundtruth':str(process_na(role_value_answer))})
+
+
 
 
 # Function to replace empty strings, single spaces, and 'nan' with 'Bad Information'
@@ -589,12 +537,12 @@ def replace_bad_info(item):
         if value in ['', ' ', 'nan', np.nan]:
             item[key] = 'Bad Information'
         elif key == 'pred':
-            if '是：' in value:
-                item[key] = value.split('是：')[-1]
-            elif '是' in value and len(value)>=3:
-                item[key] = value.split('是')[-1]
-            elif '回答: ' in value:
-                item[key] = value.split('回答: ')[-1]
+            if 'Yes:' in value:
+                item[key] = value.split('Yes:')[-1]
+            elif 'Yes' in value and len(value)>=3:
+                item[key] = value.split('Yes')[-1]
+            elif 'Answer:' in value:
+                item[key] = value.split('Answer:')[-1]
     return item
 
 
