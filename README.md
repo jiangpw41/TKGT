@@ -1,3 +1,6 @@
+cd /home/jiangpeiwen2/jiangpeiwen2/workspace/TKGT
+bash /home/jiangpeiwen2/jiangpeiwen2/workspace/TKGT/Hybird_RAG/2predict/parallel_predict.sh
+
 # TKGT
 This is the official code and data repository for the paper TKGT
 

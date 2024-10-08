@@ -1,0 +1,9 @@
+{
+    "offline":{
+        "local":{},
+        "api":{}
+    },
+    "online":{
+        "api":{}
+    }
+}

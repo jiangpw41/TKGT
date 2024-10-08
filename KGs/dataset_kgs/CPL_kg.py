@@ -275,6 +275,20 @@ case_class = {
     "专题问题" : special_issue
 }
 
+case_value = {
+    "class_reference":case_class,
+    "案号" : None, 
+    "案件名称" : None, 
+    "借款次数情况" : None, 
+    "案件复杂情况" : None, 
+    "是否存在错判情形" : None, 
+    "是否存在判决书笔误" : None, 
+    "案件简要评述" : None, 
+    "结案日期" : None,                    # 非表必需
+    "专题问题" : None, 
+}
+
+
 #####################################################（Role）####################################################
 court_class = {
     "姓名名称" : value_range["字符串"],                  # 非表必需
@@ -284,6 +298,16 @@ court_class = {
     "人民陪审员" : value_range["字符串列表"]              # 非表必需
 }
 
+court_value = {
+    "class_reference":court_class,
+    "法院名称" : None,                  # 非表必需
+    "位置" : None,                      # 非表必需
+    "审判长" : None,                    # 非表必需
+    "书记员" : None,                    # 非表必需
+    "人民陪审员" : None,             # 非表必需
+}
+
+
 agent_role_class = {
     "姓名名称" : value_range["字符串"],
     "出庭情况" : value_range["是否"],
@@ -291,11 +315,50 @@ agent_role_class = {
     "所属机构" : value_range["字符串"],                     # 非表必需
 }
 
+agent_role_value = {
+    "class_reference":agent_role_class,
+    "姓名名称" : None,
+    "出庭情况" : None,
+    "角色类型" : None,
+    "所属机构" : None,                   # 非表必需
+}
+
+
 case_role_class = {
     "姓名名称": value_range["字符串"],
     "借贷关系角色" : value_range["借贷关系角色"],
     "同类角色序号" : value_range["数值"],
     "代理人" : [agent_role_class]
+}
+
+case_role_value = {
+    "class_reference":case_role_class,
+    "姓名名称": None,
+    "借贷关系角色" : None,
+    "同类角色序号" : None,
+    "代理人" : None,
+}
+
+
+case_person_class = {
+    "姓名名称": value_range["字符串"],
+    "借贷关系角色" : value_range["借贷关系角色"],
+    "同类角色序号" : value_range["数值"],
+    "代理人" : [agent_role_class],
+    "出庭情况" : value_range["是否"],
+    "角色类型" : value_range["代理人员角色类型"],
+    "所属机构" : value_range["字符串"], 
+}
+
+case_person_value = {
+    "class_reference":case_person_class,
+    "姓名名称": None,
+    "借贷关系角色" : None,
+    "同类角色序号" : None,
+    "代理人" : None,
+    "出庭情况" : None,
+    "角色类型" : None,
+    "所属机构" : None, 
 }
 
 Roles_class = {
@@ -482,9 +545,20 @@ request_class = {
     "需返回逾期利息" : [Thing_class["required_interest_class"]],
     "需返回违约金" : [Thing_class["required_damages_class"]],
     "是否要求承担担保责任" :[Thing_class["guarantee_liability_class"]],     # 为空则不要求，否则列表形式
-    "需返回债权实现费用（起诉前）" : Thing_class["debt_realization_costs_class"],
-    "需返回债权实现费用（起诉后）" : Thing_class["debt_realization_costs_class"]
+    "需返回债权实现费用" : Thing_class["debt_realization_costs_class"]
 }
+
+request_value = {
+    "class_reference":request_class,
+    "是否变更诉讼请求" : None, 
+    "需返回本金总额" : None, 
+    "需返回利息" : None, 
+    "需返回逾期利息" : None, 
+    "需返回违约金" : None, 
+    "是否要求承担担保责任" :None,  # 为空则不要求，否则列表形式
+    "需返回债权实现费用" : None, 
+}
+
 
 # 借款事件类
 borrow_class = {
@@ -512,4 +586,182 @@ borrow_class = {
     "借款实际交付" : [Thing_class["agreed_guarantee_class"]],
     "已还款总体情况类型" : value_range["已还款总体情况类型"],
     "已还款" : [Thing_class["repaid_class"]],
+}
+
+
+borrow_value = {
+    # 借款事实
+    "class_reference":case_person_class,
+    "借款目的与用途" : None, 
+    "借款人与出借人关系类型" : None, 
+    "担保人的姓名或单位名称" : None, 
+    "借款人与担保人关系类型" : None, 
+    "意思表示日" : None, 
+    "借款次数" : None, 
+    "借款次数情况" : None, 
+    "是否有借款凭证" : None, 
+    # 约定事实
+    "约定的借款金额" : None, 
+    "约定的还款日期或借款期限" : None, 
+    "约定的利息" : None, 
+    "约定的逾期利息" : None, 
+    "约定的违约金" : None, 
+    "管辖约定情况" : None, 
+    "仲裁约定情况" : None, 
+    "程序性费用的承担（律师费、诉讼费等）约定" : None, 
+    "约定的还款方式" : None, 
+    "约定的担保" : None, 
+    # 交付与还款事实
+    "借款实际交付" : None, 
+    "已还款总体情况类型" : None, 
+    "已还款" : None, 
+}
+
+
+
+key_role_dict_naive = {
+ '法院姓名名称': {'role': '法院', 'value_range': value_range["字符串"]},
+ '出借人（原告）姓名名称': {'role': '出借人（原告）', 'value_range': value_range["字符串"]},
+ '借款人（被告）姓名名称': {'role': '借款人（被告）', 'value_range': value_range["字符串"]},
+ '担保人（被告）姓名名称': {'role': '担保人（被告）', 'value_range': value_range["字符串"]},
+ '其他诉讼参与人姓名名称': {'role': '其他诉讼参与人', 'value_range': value_range["字符串"]},
+ '法院是否变更诉讼请求': {'role': '法院', 'value_range': value_range["是否"]},
+ '出借人（原告）是否变更诉讼请求': {'role': '出借人（原告）', 'value_range': value_range["是否"]},
+ '借款人（被告）是否变更诉讼请求': {'role': '借款人（被告）', 'value_range': value_range["是否"]},
+ '担保人（被告）是否变更诉讼请求': {'role': '担保人（被告）', 'value_range': value_range["是否"]},
+ '其他诉讼参与人是否变更诉讼请求': {'role': '其他诉讼参与人', 'value_range': value_range["是否"]},
+ '法院需返回本金总额（元）': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）需返回本金总额（元）': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）需返回本金总额（元）': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）需返回本金总额（元）': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人需返回本金总额（元）': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '法院需返回利息总额（元）': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）需返回利息总额（元）': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）需返回利息总额（元）': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）需返回利息总额（元）': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人需返回利息总额（元）': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '出借人（原告）需返回利息计算截止日期': {'role': '出借人（原告）', 'value_range': value_range["日期值"]},
+ '借款人（被告）需返回利息计算截止日期': {'role': '借款人（被告）', 'value_range': value_range["日期值"]},
+ '担保人（被告）需返回利息计算截止日期': {'role': '担保人（被告）', 'value_range': value_range["日期值"]},
+ '其他诉讼参与人需返回利息计算截止日期': {'role': '其他诉讼参与人', 'value_range': value_range["日期值"]},
+ '法院需返回利息计算截止日期类型': {'role': '法院', 'value_range': value_range["截止日期类型"]},
+ '出借人（原告）需返回利息计算截止日期类型': {'role': '出借人（原告）', 'value_range': value_range["截止日期类型"]},
+ '借款人（被告）需返回利息计算截止日期类型': {'role': '借款人（被告）', 'value_range': value_range["截止日期类型"]},
+ '担保人（被告）需返回利息计算截止日期类型': {'role': '担保人（被告）', 'value_range': value_range["截止日期类型"]},
+ '其他诉讼参与人需返回利息计算截止日期类型': {'role': '其他诉讼参与人', 'value_range': value_range["截止日期类型"]},
+ '法院需返回利息利率类型': {'role': '法院', 'value_range': value_range["利率类型"]},
+ '出借人（原告）需返回利息利率类型': {'role': '出借人（原告）', 'value_range': value_range["利率类型"]},
+ '借款人（被告）需返回利息利率类型': {'role': '借款人（被告）', 'value_range': value_range["利率类型"]},
+ '担保人（被告）需返回利息利率类型': {'role': '担保人（被告）', 'value_range': value_range["利率类型"]},
+ '其他诉讼参与人需返回利息利率类型': {'role': '其他诉讼参与人', 'value_range': value_range["利率类型"]},
+ '法院需返回利息利率数值（百分比或元）': {'role': '法院', 'value_range': value_range["率数值"]},
+ '出借人（原告）需返回利息利率数值（百分比或元）': {'role': '出借人（原告）', 'value_range': value_range["率数值"]},
+ '借款人（被告）需返回利息利率数值（百分比或元）': {'role': '借款人（被告）', 'value_range': value_range["率数值"]},
+ '担保人（被告）需返回利息利率数值（百分比或元）': {'role': '担保人（被告）', 'value_range': value_range["率数值"]},
+ '其他诉讼参与人需返回利息利率数值（百分比或元）': {'role': '其他诉讼参与人', 'value_range': value_range["率数值"]},
+ '法院需返回逾期利息总额（元）': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）需返回逾期利息总额（元）': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）需返回逾期利息总额（元）': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）需返回逾期利息总额（元）': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人需返回逾期利息总额（元）': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '法院需返回逾期利息计算起始日期': {'role': '法院', 'value_range': value_range["日期值"]},
+ '出借人（原告）需返回逾期利息计算起始日期': {'role': '出借人（原告）', 'value_range': value_range["日期值"]},
+ '借款人（被告）需返回逾期利息计算起始日期': {'role': '借款人（被告）', 'value_range': value_range["日期值"]},
+ '担保人（被告）需返回逾期利息计算起始日期': {'role': '担保人（被告）', 'value_range': value_range["日期值"]},
+ '其他诉讼参与人需返回逾期利息计算起始日期': {'role': '其他诉讼参与人', 'value_range': value_range["日期值"]},
+ '法院需返回逾期利息计算起始日期类型': {'role': '法院', 'value_range': value_range["起始日期类型"]},
+ '出借人（原告）需返回逾期利息计算起始日期类型': {'role': '出借人（原告）', 'value_range': value_range["起始日期类型"]},
+ '借款人（被告）需返回逾期利息计算起始日期类型': {'role': '借款人（被告）', 'value_range': value_range["起始日期类型"]},
+ '担保人（被告）需返回逾期利息计算起始日期类型': {'role': '担保人（被告）', 'value_range': value_range["起始日期类型"]},
+ '其他诉讼参与人需返回逾期利息计算起始日期类型': {'role': '其他诉讼参与人', 'value_range': value_range["起始日期类型"]},
+ '法院需返回逾期利息计算截止日期': {'role': '法院', 'value_range': value_range["日期值"]},
+ '出借人（原告）需返回逾期利息计算截止日期': {'role': '出借人（原告）', 'value_range': value_range["日期值"]},
+ '借款人（被告）需返回逾期利息计算截止日期': {'role': '借款人（被告）', 'value_range': value_range["日期值"]},
+ '担保人（被告）需返回逾期利息计算截止日期': {'role': '担保人（被告）', 'value_range': value_range["日期值"]},
+ '其他诉讼参与人需返回逾期利息计算截止日期': {'role': '其他诉讼参与人', 'value_range': value_range["日期值"]},
+ '法院需返回逾期利息计算截止日期类型': {'role': '法院', 'value_range': [value_range["起始日期类型"], value_range["截止日期类型"]]},
+ '出借人（原告）需返回逾期利息计算截止日期类型': {'role': '出借人（原告）', 'value_range': value_range["截止日期类型"]},
+ '借款人（被告）需返回逾期利息计算截止日期类型': {'role': '借款人（被告）', 'value_range': value_range["截止日期类型"]},
+ '担保人（被告）需返回逾期利息计算截止日期类型': {'role': '担保人（被告）', 'value_range': value_range["截止日期类型"]},
+ '其他诉讼参与人需返回逾期利息计算截止日期类型': {'role': '其他诉讼参与人', 'value_range': value_range["截止日期类型"]},
+ '法院需返回逾期利息利率类型': {'role': '法院', 'value_range': value_range["利率类型"]},
+ '出借人（原告）需返回逾期利息利率类型': {'role': '出借人（原告）', 'value_range': value_range["利率类型"]},
+ '借款人（被告）需返回逾期利息利率类型': {'role': '借款人（被告）', 'value_range': value_range["利率类型"]},
+ '担保人（被告）需返回逾期利息利率类型': {'role': '担保人（被告）', 'value_range': value_range["利率类型"]},
+ '其他诉讼参与人需返回逾期利息利率类型': {'role': '其他诉讼参与人', 'value_range': value_range["利率类型"]},
+ '法院需返回逾期利息利率数值（百分比或元）': {'role': '法院', 'value_range': value_range["率数值"]},
+ '出借人（原告）需返回逾期利息利率数值（百分比或元）': {'role': '出借人（原告）', 'value_range': value_range["率数值"]},
+ '借款人（被告）需返回逾期利息利率数值（百分比或元）': {'role': '借款人（被告）', 'value_range': value_range["率数值"]},
+ '担保人（被告）需返回逾期利息利率数值（百分比或元）': {'role': '担保人（被告）', 'value_range': value_range["率数值"]},
+ '其他诉讼参与人需返回逾期利息利率数值（百分比或元）': {'role': '其他诉讼参与人', 'value_range': value_range["率数值"]},
+ '法院1需返回违约金总额（元）': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）1需返回违约金总额（元）': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）1需返回违约金总额（元）': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）1需返回违约金总额（元）': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人1需返回违约金总额（元）': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '法院1需返回违约金计算起始日期': {'role': '法院', 'value_range': value_range["日期值"]},
+ '出借人（原告）1需返回违约金计算起始日期': {'role': '出借人（原告）', 'value_range': value_range["日期值"]},
+ '借款人（被告）1需返回违约金计算起始日期': {'role': '借款人（被告）', 'value_range': value_range["日期值"]},
+ '担保人（被告）1需返回违约金计算起始日期': {'role': '担保人（被告）', 'value_range': value_range["日期值"]},
+ '其他诉讼参与人1需返回违约金计算起始日期': {'role': '其他诉讼参与人', 'value_range': value_range["日期值"]},
+ '法院1需返回违约金计算起始日期类型': {'role': '法院', 'value_range': value_range["起始日期类型"]},
+ '出借人（原告）1需返回违约金计算起始日期类型': {'role': '出借人（原告）', 'value_range': value_range["起始日期类型"]},
+ '借款人（被告）1需返回违约金计算起始日期类型': {'role': '借款人（被告）', 'value_range': value_range["起始日期类型"]},
+ '担保人（被告）1需返回违约金计算起始日期类型': {'role': '担保人（被告）', 'value_range': value_range["起始日期类型"]},
+ '其他诉讼参与人1需返回违约金计算起始日期类型': {'role': '其他诉讼参与人', 'value_range': value_range["起始日期类型"]},
+ '法院1需返回违约金计算截止日期': {'role': '法院', 'value_range': value_range["日期值"]},
+ '出借人（原告）1需返回违约金计算截止日期': {'role': '出借人（原告）', 'value_range': value_range["日期值"]},
+ '借款人（被告）1需返回违约金计算截止日期': {'role': '借款人（被告）', 'value_range': value_range["日期值"]},
+ '担保人（被告）1需返回违约金计算截止日期': {'role': '担保人（被告）', 'value_range': value_range["日期值"]},
+ '其他诉讼参与人1需返回违约金计算截止日期': {'role': '其他诉讼参与人', 'value_range': value_range["日期值"]},
+ '法院1需返回违约金计算截止日期类型': {'role': '法院', 'value_range': [value_range["起始日期类型"], value_range["截止日期类型"]]},
+ '出借人（原告）1需返回违约金计算截止日期类型': {'role': '出借人（原告）', 'value_range': value_range["截止日期类型"]},
+ '借款人（被告）1需返回违约金计算截止日期类型': {'role': '借款人（被告）', 'value_range': value_range["截止日期类型"]},
+ '担保人（被告）1需返回违约金计算截止日期类型': {'role': '担保人（被告）', 'value_range': value_range["截止日期类型"]},
+ '其他诉讼参与人1需返回违约金计算截止日期类型': {'role': '其他诉讼参与人', 'value_range': value_range["截止日期类型"]},
+ '法院1需返回违约金违约金类型': {'role': '法院', 'value_range': value_range["利率类型"]},
+ '出借人（原告）1需返回违约金违约金类型': {'role': '出借人（原告）', 'value_range': value_range["利率类型"]},
+ '借款人（被告）1需返回违约金违约金类型': {'role': '借款人（被告）', 'value_range': value_range["利率类型"]},
+ '担保人（被告）1需返回违约金违约金类型': {'role': '担保人（被告）', 'value_range': value_range["利率类型"]},
+ '其他诉讼参与人1需返回违约金违约金类型': {'role': '其他诉讼参与人', 'value_range': value_range["利率类型"]},
+ '法院1需返回违约金违约金数值（百分比或元）': {'role': '法院', 'value_range': value_range["率数值"]},
+ '出借人（原告）1需返回违约金违约金数值（百分比或元）': {'role': '出借人（原告）', 'value_range': value_range["率数值"]},
+ '借款人（被告）1需返回违约金违约金数值（百分比或元）': {'role': '借款人（被告）', 'value_range': value_range["率数值"]},
+ '担保人（被告）1需返回违约金违约金数值（百分比或元）': {'role': '担保人（被告）', 'value_range': value_range["率数值"]},
+ '其他诉讼参与人1需返回违约金违约金数值（百分比或元）': {'role': '其他诉讼参与人', 'value_range': value_range["率数值"]},
+ '法院1担保责任是否承担': {'role': '法院', 'value_range': value_range["是否"]},
+ '出借人（原告）1担保责任是否承担': {'role': '出借人（原告）', 'value_range': value_range["是否"]},
+ '借款人（被告）1担保责任是否承担': {'role': '借款人（被告）', 'value_range': value_range["是否"]},
+ '担保人（被告）1担保责任是否承担': {'role': '担保人（被告）', 'value_range': value_range["是否"]},
+ '其他诉讼参与人1担保责任是否承担': {'role': '其他诉讼参与人', 'value_range': value_range["是否"]},
+ '法院1担保责任承担保证责任的人或单位名称': {'role': '法院', 'value_range': value_range["字符串"]},
+ '出借人（原告）1担保责任承担保证责任的人或单位名称': {'role': '出借人（原告）', 'value_range': value_range["字符串"]},
+ '借款人（被告）1担保责任承担保证责任的人或单位名称': {'role': '借款人（被告）', 'value_range': value_range["字符串"]},
+ '担保人（被告）1担保责任承担保证责任的人或单位名称': {'role': '担保人（被告）', 'value_range': value_range["字符串"]},
+ '其他诉讼参与人1担保责任承担保证责任的人或单位名称': {'role': '其他诉讼参与人', 'value_range': value_range["字符串"]},
+ '法院1担保责任保证责任类型': {'role': '法院', 'value_range': value_range["担保责任类型"]},
+ '出借人（原告）1担保责任保证责任类型': {'role': '出借人（原告）', 'value_range': value_range["担保责任类型"]},
+ '借款人（被告）1担保责任保证责任类型': {'role': '借款人（被告）', 'value_range': value_range["担保责任类型"]},
+ '担保人（被告）1担保责任保证责任类型': {'role': '担保人（被告）', 'value_range': value_range["担保责任类型"]},
+ '其他诉讼参与人1担保责任保证责任类型': {'role': '其他诉讼参与人', 'value_range': value_range["担保责任类型"]},
+ '法院起诉前需返回债权实现费用总额': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）起诉前需返回债权实现费用总额': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）起诉前需返回债权实现费用总额': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）起诉前需返回债权实现费用总额': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人起诉前需返回债权实现费用总额': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '法院起诉前需返回债权实现费用类型': {'role': '法院', 'value_range': value_range["费用类型"]},
+ '出借人（原告）起诉前需返回债权实现费用类型': {'role': '出借人（原告）', 'value_range': value_range["费用类型"]},
+ '借款人（被告）起诉前需返回债权实现费用类型': {'role': '借款人（被告）', 'value_range': value_range["费用类型"]},
+ '担保人（被告）起诉前需返回债权实现费用类型': {'role': '担保人（被告）', 'value_range': value_range["费用类型"]},
+ '其他诉讼参与人起诉前需返回债权实现费用类型': {'role': '其他诉讼参与人', 'value_range': value_range["费用类型"]},
+ '法院起诉后需返回债权实现费用总额': {'role': '法院', 'value_range': value_range["金额"]},
+ '出借人（原告）起诉后需返回债权实现费用总额': {'role': '出借人（原告）', 'value_range': value_range["金额"]},
+ '借款人（被告）起诉后需返回债权实现费用总额': {'role': '借款人（被告）', 'value_range': value_range["金额"]},
+ '担保人（被告）起诉后需返回债权实现费用总额': {'role': '担保人（被告）', 'value_range': value_range["金额"]},
+ '其他诉讼参与人起诉后需返回债权实现费用总额': {'role': '其他诉讼参与人', 'value_range': value_range["金额"]},
+ '法院起诉后需返回债权实现费用类型': {'role': '法院', 'value_range': value_range["费用类型"]},
+ '出借人（原告）起诉后需返回债权实现费用类型': {'role': '出借人（原告）', 'value_range': value_range["费用类型"]},
+ '借款人（被告）起诉后需返回债权实现费用类型': {'role': '借款人（被告）', 'value_range': value_range["费用类型"]},
+ '担保人（被告）起诉后需返回债权实现费用类型': {'role': '担保人（被告）', 'value_range': value_range["费用类型"]},
+ '其他诉讼参与人起诉后需返回债权实现费用类型': {'role': '其他诉讼参与人', 'value_range': value_range["费用类型"]}
 }

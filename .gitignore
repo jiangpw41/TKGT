@@ -9,10 +9,20 @@ Mixed_IE/llm/responses_history.py
 Mixed_IE/further_processed/
 Mixed_IE/statistic/Similarity.pdf
 
+Hybird_RAG/predict/LLMInferenceServer/
+Hybird_RAG/prepare_data_model/
+Hybird_RAG/evaluation/result_show.ipynb
+Hybird_RAG/evaluation/predict_results/
+Hybird_RAG/evaluation/roberta-large/
+
+Hybird_RAG/model_list.json
+
 data/rotowire/
 data/CPL/
+data/CPL.zip
 data/e2e/
-
+data/e2e.zip
+data/new_table.json
 raw/
 
 preprocess/

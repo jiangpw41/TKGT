@@ -2,7 +2,7 @@ import logging
 import networkx as nx
 import matplotlib
 import matplotlib.pyplot as plt
-
+import random
 # Configure matplotlib to use a font that supports Chinese characters
 matplotlib.rcParams['font.sans-serif'] = ['SimHei']  # or 'Microsoft YaHei'
 matplotlib.rcParams['axes.unicode_minus'] = False  # Ensures that negative signs display correctly
@@ -79,39 +79,6 @@ def visualize_knowledge_graph_interactive(kg):
                     )
     fig.show()
 
-class KnowledgeGraph:
-    def __init__(self):
-        self.graph = nx.DiGraph()
-
-    def add_entity(self, entity_id, entity_info=None, default_labels=None):
-        if default_labels is None:
-            default_labels = []  # Default to an empty list if no default labels are provided
-        # Initialize default labels with None or empty values
-        entity_data = {label: None for label in default_labels}
-        # Update with any provided entity info
-        if entity_info is not None:
-            entity_data.update(entity_info)
-        self.graph.add_node(entity_id, **entity_data)
-
-    def update_entity(self, entity_id, updates):
-        if entity_id in self.graph:
-            self.graph.nodes[entity_id].update(updates)
-        else:
-            raise KeyError(f"No entity found with ID {entity_id}")
-
-    def get_unfilled_labels(self):
-        unfilled = {}
-        for node_id, data in self.graph.nodes(data=True):
-            missing_labels = {label: val for label, val in data.items() if val is None}
-            if missing_labels:
-                unfilled[node_id] = missing_labels
-        return unfilled
-
-    def get_entity(self, entity_id):
-        return self.graph.nodes[entity_id]
-
-    def add_relationship(self, entity1, entity2, attributes):
-        self.graph.add_edge(entity1, entity2, **attributes)
 
 def read_text_to_list( path ):
     with open(path, 'r') as file:  
@@ -154,3 +121,176 @@ def create_logger( log_name, save_path_name, level=1 ):
 
     return logger
 
+
+
+class KnowledgeGraph:
+    def __init__(self):
+        self.graph = nx.DiGraph()
+
+    def add_entity(self, entity_id, entity_info=None, default_labels=None):
+        if default_labels is None:
+            default_labels = []  # Default to an empty list if no default labels are provided
+        # Initialize default labels with None or empty values
+        entity_data = {label: None for label in default_labels}
+        # Update with any provided entity info
+        if entity_info is not None:
+            entity_data.update(entity_info)
+        self.graph.add_node(entity_id, **entity_data)
+
+    def update_entity(self, entity_id, label, label_value):
+        """
+        Update the value of label for entity
+        """
+        if entity_id in self.graph:
+            if label in self.graph.nodes[entity_id]:
+                self.graph.nodes[entity_id][label] = label_value
+            else:
+                raise KeyError(f"Label '{label}' does not exist for entity '{entity_id}'.")
+        else:
+            raise KeyError(f"No entity found with ID '{entity_id}'.")
+
+
+
+    def get_unfilled_labels(self):
+        unfilled = {}
+        for node_id, data in self.graph.nodes(data=True):
+            missing_labels = {label: val for label, val in data.items() if val is None}
+            if missing_labels:
+                unfilled[node_id] = missing_labels
+        return unfilled
+
+    def get_entity(self, entity_id):
+        return self.graph.nodes[entity_id]
+
+    def add_relationship(self, entity1, entity2, attributes):
+        """
+        add directed relationship from entity1 to entity2
+        """
+        self.graph.add_edge(entity1, entity2, **attributes)
+
+    def get_search_entity(self):
+        """
+        1. for all entities, calculate number of labels under entity, number of filled label under entity
+        2. for all entities, calculate the number of labels under adjacent entities, number of filled labels under adjacent entities
+        3. select the entities that has the largest number of (number of filled labels under adjacent entities)/(number of labels under adjacent entities)
+        4. for the selected entities, return the entity that has the lowest value of (number of filled labels under entities)/(number of labels under entities)
+        5. if there are more than one entitities has the same lowest value of (number of filled labels under entities)/(number of labels under entities), randomly return one of them
+        6. if an entity has no adjancent entities, it should be viewed as equivalent as having the (number of filled labels under adjacent entities)/(number of labels under adjacent entities), if no entities has adjacent entities, the values of (number of filled labels under adjacent entities)/(number of labels under adjacent entities) for them would all be set to 1
+        """
+        # Step 1: Calculate number of labels and number of filled labels for each entity
+        entity_scores = {}
+        for entity_id, data in self.graph.nodes(data=True):
+            num_labels = len(data)
+            num_filled_labels = sum(1 for value in data.values() if value is not None)
+            entity_scores[entity_id] = (num_labels, num_filled_labels)
+
+        # Step 2: Calculate number of labels and filled labels for adjacent entities
+        adjacent_scores = {}
+        for entity_id in self.graph.nodes:
+            num_adj_labels = 0
+            num_adj_filled_labels = 0
+            neighbors = list(self.graph.neighbors(entity_id))
+            if neighbors:
+                for neighbor in neighbors:
+                    num_adj_labels += entity_scores[neighbor][0]
+                    num_adj_filled_labels += entity_scores[neighbor][1]
+                adj_filled_ratio = num_adj_filled_labels / num_adj_labels
+            else:
+                adj_filled_ratio = 1  # Handle the case where there are no adjacent entities
+            adjacent_scores[entity_id] = (num_adj_labels, num_adj_filled_labels, adj_filled_ratio)
+
+        # Step 3: Select entities based on adjacent entities' filled labels ratio
+        selected_entities = []
+        max_adj_filled_ratio = -1
+        for entity_id, (num_adj_labels, num_adj_filled_labels, adj_filled_ratio) in adjacent_scores.items():
+            if adj_filled_ratio > max_adj_filled_ratio:
+                selected_entities = [entity_id]
+                max_adj_filled_ratio = adj_filled_ratio
+            elif adj_filled_ratio == max_adj_filled_ratio:
+                selected_entities.append(entity_id)
+
+        # Step 4: For selected entities, find the one with the lowest filled labels ratio
+        best_entities = []
+        min_filled_ratio = float('inf')
+        for entity_id in selected_entities:
+            num_labels, num_filled_labels = entity_scores[entity_id]
+            if num_labels > 0:
+                filled_ratio = num_filled_labels / num_labels
+                if filled_ratio < min_filled_ratio:
+                    best_entities = [entity_id]
+                    min_filled_ratio = filled_ratio
+                elif filled_ratio == min_filled_ratio:
+                    best_entities.append(entity_id)
+
+        # Step 5: Return one of the entities with the lowest filled ratio randomly
+        if best_entities:
+            return random.choice(best_entities)
+        return None
+
+
+    def get_random_unfilled_label(self, search_entity):
+        """
+        Randomly return an unfilled label under search_entity
+        If the name label is unfilled, return the name label:
+            entity_name = self.graph.nodes[search_entity]['Name Label']
+        """
+        if search_entity in self.graph:
+            entity_data = self.graph.nodes[search_entity]
+            entity_name = self.graph.nodes[search_entity]['Name']
+            if entity_name is None:
+                return 'Name'
+            unfilled_labels = [label for label, value in entity_data.items() if value is None]
+            if unfilled_labels:
+                return random.choice(unfilled_labels)
+        return None
+
+    def describe_kg(self):
+        """
+        Return a string that describes the knowledge graph for passing it to a LLM
+        """
+        description = "Knowledge Graph Description:\n"
+        for entity_id, data in self.graph.nodes(data=True):
+            description += f"Entity: {entity_id}\n"
+            for label, value in data.items():
+                description += f"  {label}: {value}\n"
+            neighbors = list(self.graph.neighbors(entity_id))
+            if neighbors:
+                description += f"  Connected to: {', '.join(neighbors)}\n"
+            description += "\n"
+        return description
+
+    def describe_entity(self, entity):
+        """
+        Return a string that describes the entity in the KG,
+        describe by its own labels, relationship to adjacent entities and labels of adjacent entities
+        """
+        if entity not in self.graph:
+            return f"Entity {entity} does not exist in the knowledge graph."
+        
+        description = f"Entity: {entity}\n"
+        entity_data = self.graph.nodes[entity]
+        for label, value in entity_data.items():
+            description += f"  {label}: {value}\n"
+        
+        neighbors = list(self.graph.neighbors(entity))
+        if neighbors:
+            description += "Direct:\n"
+            for neighbor in neighbors:
+                description += f"    {neighbor}:\n"
+                neighbor_data = self.graph.nodes[neighbor]
+                for label, value in neighbor_data.items():
+                    description += f"      {label}: {value}\n"
+        else:
+            description += "没有有向关系.\n"
+        
+        return description
+
+    def get_entity_name(self, entity):
+        return self.graph.nodes[entity]['Name']
+
+    def return_data_cpl(self):
+        cells = []
+        for entity in self.graph:
+            entity_data = self.graph.nodes[search_entity]
+            cells += [entity+data_item for data_item in entity_data]
+        return cells

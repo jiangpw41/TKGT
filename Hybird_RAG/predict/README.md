@@ -1,0 +1,8 @@
+# Predict文件夹介绍
+包含predict和post_process两个主文件，以及一个temp文件夹，
+保存0prepare_data_model步骤生成的prompt_list和预测结果。
+预测结果经过post_process处理后放到3evaluation的predict_results下。
+
+模型处理原理是离线处理，即生成全部prompt_list并保存到本地后，运行模型
+一次性生成所有预测结果，也有基于redis的在线推理模型，但较难做到多卡。
+离线多卡的方式是读取数据后处理一部分，用脚本同时启动多个vllm引擎，每张卡一个。
