@@ -3,9 +3,63 @@ import networkx as nx
 import matplotlib
 import matplotlib.pyplot as plt
 import random
+
+
+from tqdm import tqdm
+import concurrent
+from concurrent.futures import ProcessPoolExecutor
+
 # Configure matplotlib to use a font that supports Chinese characters
 matplotlib.rcParams['font.sans-serif'] = ['SimHei']  # or 'Microsoft YaHei'
 matplotlib.rcParams['axes.unicode_minus'] = False  # Ensures that negative signs display correctly
+
+
+_PUNCATUATION_EN = [',', '.', ';', '?', '!', '…', ":", '"', '"', "'", "'", "(", ")", ]
+_PUNCATUATION_ZH = ['，', '。', '；', '？', '！', '......', "：",  '“', '”', '‘', '’', '（', '）', '《', '》', '【', '】', '[', ']', '、', "\\n"]
+
+def multi_process( processor, task_list, task_description, *args ):
+    # 所有使用多进程工具的函数，必须将迭代对象及其index作为函数参数的前两位
+    splited_task_list = [None]*len(task_list)
+    error_reading = 0
+    count = 0
+    with ProcessPoolExecutor() as executor:
+        future_to_item = {}
+        for j, item in enumerate(task_list):
+            future_to_item[executor.submit(processor, item, j, *args)] = j 
+        with tqdm(total=len(future_to_item), desc=f"Preprocess {task_description}") as pbar:
+            for future in concurrent.futures.as_completed(future_to_item): 
+                line = future.result()
+                count += 1
+                if line=={} or line=="":
+                    error_reading += 1
+                splited_task_list[ future_to_item[future]] = future.result()
+                pbar.update(1)
+    return splited_task_list, error_reading, count
+
+def create_logger( log_name, save_path_name, level=1 ):
+    # Ceate and determine its level
+    levels = [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL]
+    logger = logging.getLogger(log_name)
+    logger.setLevel( levels[level] )  
+    
+    # Create a FileHandler for writing log files 
+    file_handler = logging.FileHandler( save_path_name, encoding='utf-8' )  
+    file_handler.setLevel( levels[level] )  
+    
+    # Create a StreamHandler for outputting to the console  
+    console_handler = logging.StreamHandler()  
+    console_handler.setLevel( levels[level] )  
+    
+    # Define the output format of the handler 
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  
+    file_handler.setFormatter(formatter)  
+    console_handler.setFormatter(formatter)  
+    
+    # Add Handler to Logger
+    logger.addHandler(file_handler)  
+    logger.addHandler(console_handler)  
+
+    return logger
 
 def visualize_knowledge_graph(kg):
     pos = nx.spring_layout(kg.graph)  # positions for all nodes
@@ -96,31 +150,32 @@ class CustomError(Exception):
         if logger:  
             logger.error(message)
 
-def create_logger( log_name, save_path_name, level=1 ):
-    # Ceate and determine its level
-    levels = [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL]
-    logger = logging.getLogger(log_name)
-    logger.setLevel( levels[level] )  
-    
-    # Create a FileHandler for writing log files 
-    file_handler = logging.FileHandler( save_path_name, encoding='utf-8' )  
-    file_handler.setLevel( levels[level] )  
-    
-    # Create a StreamHandler for outputting to the console  
-    console_handler = logging.StreamHandler()  
-    console_handler.setLevel( levels[level] )  
-    
-    # Define the output format of the handler 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  
-    file_handler.setFormatter(formatter)  
-    console_handler.setFormatter(formatter)  
-    
-    # Add Handler to Logger
-    logger.addHandler(file_handler)  
-    logger.addHandler(console_handler)  
 
-    return logger
-
+class SingletonLogger:  
+    _instances = {}  
+    @classmethod  
+    def get_logger(cls, log_name, save_path_name, level=1):  
+        if log_name not in cls._instances:  
+            levels = [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL]  
+            logger = logging.getLogger(log_name)  
+            logger.setLevel(levels[level])  
+  
+            file_handler = logging.FileHandler(save_path_name, encoding='utf-8')  
+            file_handler.setLevel(levels[level])  
+  
+            console_handler = logging.StreamHandler()  
+            console_handler.setLevel(levels[level])  
+  
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  
+            file_handler.setFormatter(formatter)  
+            console_handler.setFormatter(formatter)  
+  
+            logger.addHandler(file_handler)  
+            logger.addHandler(console_handler)  
+  
+            cls._instances[log_name] = logger  
+  
+        return cls._instances[log_name]
 
 
 class KnowledgeGraph:
