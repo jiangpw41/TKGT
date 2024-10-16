@@ -2,7 +2,7 @@
 **/.ipynb_checkpoints/
 **/*.log
 **/test.ipynb
-
+**/kg_test.ipynb
 
 Mixed_IE/llm/not_important
 Mixed_IE/llm/main.ipynb
@@ -13,11 +13,12 @@ Mixed_IE/statistic/Similarity.pdf
 Hybird_RAG/predict/LLMInferenceServer/
 Hybird_RAG/temp/
 Hybird_RAG/prompt_templates.py
-Hybird_RAG/retriver/all-MiniLM-L6-v2/
+Hybird_RAG/retriever/all-MiniLM-L6-v2/
 Hybird_RAG/retriever/ms-marco-MiniLM-L-6-v2/
 Hybird_RAG/evaluation/result_show.ipynb
 Hybird_RAG/evaluation/predict_results/
 Hybird_RAG/evaluation/roberta-large/
+Hybird_RAG/evaluation/eval_results/
 
 Hybird_RAG/model_list.json
 
