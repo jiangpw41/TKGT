@@ -14,7 +14,7 @@ Hybird_RAG/predict/LLMInferenceServer/
 Hybird_RAG/temp/
 Hybird_RAG/prompt_templates.py
 Hybird_RAG/retriver/all-MiniLM-L6-v2/
-Hybird_RAG/retriver/ms-marco-MiniLM-L-6-v2/
+Hybird_RAG/retriever/ms-marco-MiniLM-L-6-v2/
 Hybird_RAG/evaluation/result_show.ipynb
 Hybird_RAG/evaluation/predict_results/
 Hybird_RAG/evaluation/roberta-large/
@@ -22,9 +22,8 @@ Hybird_RAG/evaluation/roberta-large/
 Hybird_RAG/model_list.json
 
 data/rotowire/
-data/CPL/
+data/cpl/
 data/e2e/
 raw/
 
 preprocess/
-
