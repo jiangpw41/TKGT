@@ -6,3 +6,8 @@ We use the processed data of https://github.com/shirley-wu/text_to_table and tra
 
 # Data of Wikibio and wikitabletext
 They are not table task seriously since they two have too many and inconsistent fields.
+
+# Task of data_manager.py
+将原始数据划分train和test两部分，每部分
+- XX.text：字符串文本
+- XX.pickle：二元组或三元组

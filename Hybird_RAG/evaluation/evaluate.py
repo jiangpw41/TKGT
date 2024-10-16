@@ -1,9 +1,9 @@
 """
 评估文件接口：
-    将预测结果和标签列表以元组的形式存在测试目录下predict_results文件夹的dataset_type专属结果文件夹中
+    将预测结果和标签列表以元组的形式存在测试目录下eval_results文件夹的dataset_type专属结果文件夹中
     元组中，label列表在第一个，predict在第二个，等长且列表中每个元素都为集合set()，有两种形式
-    （1）元组集合：字段名+值的元组{('area', 'city centre'), ('customer rating', 'bad information')}
-    （2）字符串集合：适用于first column这种不需要字段名的，如{'浙江省温州市瓯海区人民法院', '潘建眉', '郑恩明'},
+    （1）二元组集合：字段名+值的元组{('area', 'city centre'), ('customer rating', 'bad information')}，单实体
+    （2）三元组集合：实体名+字段名+值得元组{('name', 'field', 'value')}，多实体
     注意：全部小写，空值用bad information代替，每一次都要根据模型、Prompt给文件取一个特殊的名字
 """
 from tqdm import tqdm
@@ -13,9 +13,10 @@ import os
 import sys
 import json
 import argparse
-
+from datetime import datetime
 from sacrebleu import sentence_chrf
 import bert_score
+
 
 _Hybird_RAG_PATH = os.path.abspath(__file__)
 for i in range(2):
@@ -81,126 +82,140 @@ def metrics_by_sim(tgt_data, pred_data, metric):
         f1 = 2 * prec * recall / (prec + recall)
     return prec, recall, f1
 
-# （2）对处理完毕的data_pair求三个指标的相似度值
-def three_level_eval( data_pair ):
-    """
-    data_pair：[ 标签（first cloumn, data cell）、预测（first cloumn, data cell）]
-    """
-    parts_names = ["First Column", "Data Cell"]
+# （2）将二、三元组准备为评估数据
+def parse_table_to_data( table, col_header):
+    row_set = set()
+    col_set = set()
+    for item in table:
+        if col_header==False:
+            if len( item )==2:
+                row_set.add( item[0] )
+            else:
+                raise Exception(f"元组长度{len( item )}与任务类型col_header=False不匹配！")
+        else:
+            if len( item )==3:
+                row_set.add( item[0] )
+                col_set.add( item[1] )
+            else:
+                raise Exception(f"元组长度{len( item )}与任务类型col_header=True不匹配！")
+    return row_set, col_set, table
+
+# （1）路径和形式检查并加载
+def path_check_and_load( dataset, hyp_tgt_pair_name, eval_type ):
+    label_path = os.path.join( _Hybird_RAG_PATH, f"temp/{dataset}/{dataset}_labels.pickle")
+    predict_path = os.path.join( _Hybird_RAG_PATH, f"temp/{dataset}/predicts/{hyp_tgt_pair_name}.pickle")
+    if not os.path.exists( label_path ) or not os.path.exists( predict_path ):
+        raise Exception(f"Labels或Predicts文件至少一个不存在，请检查{hyp_tgt_pair_name}！")
+    with open(label_path, 'rb') as f:  
+        labels = pickle.load(f)
+    with open(predict_path, 'rb') as f:  
+        predicts = pickle.load(f)
+    if len(labels)!=len(predicts):
+        raise Exception( "Label和Predict results列表长度不一致！" )
+    for item in predicts[0]:
+        _len = len(item)        # 获取预测列表中第一个集合中任意一个元组的长度
+    if (_len==2 and eval_type=="multi_entity") or (_len==3 and eval_type=="single_entity"):
+        raise Exception(f"元组长度{_len}与测试类型{eval_type}不匹配!")
+    results_save_path = os.path.join( _Hybird_RAG_PATH, f'evaluation/eval_results/{dataset}_results.json')
+    # # ( label_dict, predict_dict )
+    return (labels, predicts), results_save_path
+
+
+def main( dataset, unique_name, eval_type):
+    loaded_pair_list, results_save_path = path_check_and_load( dataset, unique_name , eval_type)
+
+    row_header_precision = []
+    row_header_recall = []
+    row_header_f1 = []
+    col_header_precision = []
+    col_header_recall = []
+    col_header_f1 = []
+    relation_precision = []
+    relation_recall = []
+    relation_f1 = []
+
+    row_header = True
+    col_header = False if eval_type=="single_entity" else True
     score_s = [ 'E', 'c', 'BS-scaled']
     resutls_total = {}
     global metric_cache
-    for part_index in range(2):
-        "对first column和data cell两个部分"
-        part_name = parts_names[part_index]
-        resutls_total[part_name] = {}
-        print( f"Evaluate {part_name}")
-        _labels = data_pair[0][part_index]
-        _preds = data_pair[1][part_index]
-        
-        for metric in score_s:
-            relation_precision = []
-            relation_recall = []
-            relation_f1 = []
-            # 清空全局的字典，对两个计算过的不重复计算
-            metric_cache = dict()
-            resutls_total[part_name][metric] = {}
-            for hyp_table, tgt_table in tqdm(zip(_preds, _labels), total=len(_labels)):
-                if len(tgt_table)==0:
-                    if len(tgt_table)==len(hyp_table):
-                        p, r, f = 1, 1, 1               # 对只有first column的查询，data cell部分计为1
-                    else:
-                        p, r, f = 0, 0, 0               # 目标为空，但预测值了
-                elif len(hyp_table)==0:
-                    p, r, f = 0, 0, 0                   # 预测为空，但目标不空
-                else:
-                    p, r, f = metrics_by_sim(tgt_table, hyp_table, metric)
+    for metric in score_s:
+        resutls_total[f"Score_{metric}"]={
+            "FirstColumn":[],
+            "DataCell":[]
+        }
+        if col_header:
+            resutls_total[f"Score_{metric}"]["TableHeader"]=[]
+        for hyp_table, tgt_table in tqdm(loaded_pair_list, total=len(loaded_pair_list[0])):
+            #两者都存在，则计算指标
+            #返回两个表格的表头、列名和中间关系的set无序数据集
+            hyp_row_headers, hyp_col_headers, hyp_relations = parse_table_to_data(hyp_table, col_header)
+            tgt_row_headers, tgt_col_headers, tgt_relations = parse_table_to_data(tgt_table, col_header)
+
+            if row_header:
+                p, r, f = metrics_by_sim(tgt_row_headers, hyp_row_headers, metric)
+                row_header_precision.append(p)
+                row_header_recall.append(r)
+                row_header_f1.append(f)
+            if col_header:
+                p, r, f = metrics_by_sim(tgt_col_headers, hyp_col_headers, metric)
+                col_header_precision.append(p)
+                col_header_recall.append(r)
+                col_header_f1.append(f)
+            if len(hyp_relations) == 0:
+                relation_precision.append(0.0)
+                relation_recall.append(0.0)
+                relation_f1.append(0.0)
+            else:
+                p, r, f = metrics_by_sim(tgt_relations, hyp_relations, metric)
                 relation_precision.append(p)
                 relation_recall.append(r)
                 relation_f1.append(f)
-            resutls_total[part_name][metric]['Precision'] = np.mean(relation_precision) * 100
-            resutls_total[part_name][metric]['Recall'] =  np.mean(relation_recall) * 100
-            resutls_total[part_name][metric]['F1-Score'] =  np.mean(relation_f1) * 100
-    return resutls_total
 
-
-def path_check( dataset_info, prompt_model_name ):
-    data_info = dataset_info.split("/")
-    eval_pair_path = os.path.join( _Hybird_RAG_PATH, f"temp/{data_info[0]}/{data_info[1]}/{data_info[2]}/eval_pair_list/{prompt_model_name}.pickle")
-    results_save_path = os.path.join( _Hybird_RAG_PATH, f'evaluation/predict_results/{data_info[0]}_results/eval_results.json')
-    return data_info, eval_pair_path, results_save_path
-
-# （1）加载并准备data_pair，求完三个相似度值后进行打印和保存
-def main( prompt_list_name, model_name, dataset_info):
-    special_dataset = {
-        "e2e":["name"]
-    }
-    unique_name = prompt_list_name+"_"+model_name
-    data_info, eval_pair_path, results_save_path = path_check( dataset_info, unique_name )
-    dataset_type = data_info[0]
-    with open(eval_pair_path, 'rb') as f:  
-        loaded_list = pickle.load(f)            # ( label_dict, predict_dict )
-    test_sample_length = len(loaded_list[1])
-
-    #（2）移除bad information，划分first_column和data cell
-    data_pair = [ [ [], [] ],  [ [], [] ] ]         # [ 标签（first cloumn, data cell）、预测（first cloumn, data cell）]
-    for i in range( test_sample_length ):
-        # 对每个测试样本
-        for j in range(2):
-            # 分别处理标签值和预测值
-            data_set = loaded_list[j]
-            temp_first_column = set()
-            temp_data_cell = set()
-            for item in data_set[i]:
-                # 移除bad information并分为first column和data cell
-                if isinstance( item, str):
-                    # 字符串集合一定为first colum，
-                    if item not in ['bad information', "not found"]:
-                        temp_first_column.add( item )
-                elif isinstance( item, tuple):
-                    # 元组集合在特殊数据集中为存在first colum，但大部分为data cell
-                    if dataset_type in special_dataset and item[0] in special_dataset[dataset_type]:
-                        temp_first_column.add( item[1] )
-                    temp_data_cell.add( item )
-            data_pair[j][0].append(temp_first_column )
-            data_pair[j][1].append(temp_data_cell )
-    
-    #（3）对三个指标进行测试
-    resutls_total = three_level_eval( data_pair )
-    #（4）打印eval结果
-    parts_names = ["First Column", "Data Cell"]
-    score_s = [ 'E', 'c', 'BS-scaled']
-    for part in parts_names:
-        print( f"Results of {part}:")
-        for i in range(3):
-            print(f"Method {score_s[i]}: precision = %.2f; recall = %.2f; f1 = %.2f" % (
-                resutls_total[part][score_s[i]]['Precision'], resutls_total[part][score_s[i]]['Recall'], resutls_total[part][score_s[i]]['F1-Score'] ))
-    
-    #（6）保存eval结果：每个数据集都有一个json结果文件，先读取，再追加，最后写入
+            if row_header:
+                resutls_total[f"Score_{metric}"]["FirstColumn"] = [np.mean(row_header_precision) * 100,
+                                                                   np.mean(row_header_recall) * 100,
+                                                                   np.mean(row_header_f1) * 100]
+                print("Row header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+                    np.mean(row_header_precision) * 100, np.mean(row_header_recall) * 100, np.mean(row_header_f1) * 100))
+            if col_header:
+                resutls_total[f"Score_{metric}"]["TableHeader"] = [np.mean(col_header_precision) * 100,
+                                                                   np.mean(col_header_recall) * 100,
+                                                                   np.mean(col_header_f1) * 100]
+                print("Col header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+                    np.mean(col_header_precision) * 100, np.mean(col_header_recall) * 100, np.mean(col_header_f1) * 100))
+            resutls_total[f"Score_{metric}"]["DataCell"] = [np.mean(relation_precision) * 100,
+                                                            np.mean(relation_recall) * 100,
+                                                            np.mean(relation_f1) * 100]
+            print("Non-header cell: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+                np.mean(relation_precision) * 100, np.mean(relation_recall) * 100, np.mean(relation_f1) * 100))
+    # 保存eval结果：每个数据集都有一个json结果文件，先读取，再追加，最后写入
+    now = datetime.now()
+    human_readable_time = now.strftime("%Y-%m-%d %H:%M:%S") 
     with open( results_save_path, encoding='utf-8-sig', mode='r') as f:  
         data = json.load(f)
-    data[f"{data_info[0]}_{data_info[1]}_{data_info[2]}_{unique_name}"] = resutls_total     # 以键值对保存结果
+    data[ hyp_tgt_pair_name+f"_{human_readable_time}" ] = resutls_total     # 以键值对保存结果
     with open( results_save_path, encoding='utf-8',mode='w') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 if __name__=="__main__":
     
     parser = argparse.ArgumentParser(description="Run script with external arguments")
-    parser.add_argument('--prompt_list_name', type=str, required=True, help='提示词文件名')
-    parser.add_argument('--model_name', type=str, required=True, help='模型路径')
-    parser.add_argument('--dataset_info', type=str, required=True, help='表示独特性的字符串')
+    parser.add_argument('--dataset', type=str, required=True, help='数据集名称')
+    parser.add_argument('--eval_type', type=str, required=True, help='single_entity or multi_entity')
+    parser.add_argument('--unique_name', type=str, required=True, help='表示独特性的字符串')
     args = parser.parse_args()
     # 获取参数值
+    dataset = args.dataset
+    eval_type = args.eval_type
+    unique_name = args.unique_name
     
-    prompt_list_name = args.prompt_list_name
-    model_name = args.model_name
-    dataset_info = args.dataset_info
     """
-    prompt_list_name = "prompt_list_rag"
-    dataset_info = "cpl/table1/first_column"
-    model_name = "chatglm3-6b"
+    dataset = "prompt_list_rag"
+    eval_type = args.eval_type
+    unique_name = args.unique_name
     """
-    main( prompt_list_name, model_name, dataset_info )
+    main( dataset, unique_name, eval_type )
     
     
     

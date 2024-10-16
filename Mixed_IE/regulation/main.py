@@ -214,13 +214,14 @@ def check( data, sep=_SEPARATORS[0][3]):
     print(f" _zero {_zero} _multi {_multi}")
 
 def main( ):
+    data_path = os.path.join(_ROOT_PATH, "data/cpl/original/text_703")
+
     # 准备规则分割结果保存目录，读取文件
     dirs = os.path.join( _ROOT_PATH, "Mixed_IE/further_processed/regulation")
     if not os.path.exists(dirs):  
         # 如果目录不存在，则创建它  
         os.makedirs(dirs)
         logger.info( "Regulation: have created path of regulation results for further processing.")
-    data_path = os.path.join(_ROOT_PATH, "data/CPL/text")
     if not os.path.exists(data_path):  
         # 如果目录不存在，则创建它  
         raise FileNotFoundError(f"Directory '{data_path}' does not exist.")

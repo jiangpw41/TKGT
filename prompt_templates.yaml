@@ -1,0 +1,147 @@
+---
+# 提示词的中英文版本
+ZH:
+  FirstColumn:      # 实体名称提取
+    Instruction: |
+      你是一名{FIELD}相关的信息抽取专家，下面请你根据相关上下文提取指定对象的名称，要求如下：
+      （1）后文中将在 "目标角色" 部分为你明确提供一个对象，并为你在 "相关上下文" 部分提供一些相关的原文片段信息。
+      （2）目标角色：指的是该专业领域中的不同角色，如{ALL_ROLES}等。如果目标角色存在多个实例对象，请提取全部对象的名称，并返回以顿号"、"分隔的名称列表，如"陈亚莉、马保国、哇哈哈集团"。
+      （3）相关上下文：指的是包含目标角色名称等信息的文字片段，你所返回的名字必须在 "相关上下文" 中存在；如果不存在，则返回 <NOT FOUND>；
+      （4）请你精练、直接地返回目标的名称，不要有任何其他间接性的说明。如果你返回虚假的内容，你将被解雇。
+    Example: |
+      样例 1：
+          目标角色：原告
+          目标属性：姓名名称
+          相关上下文：["原告：周俭，女，1971年5月31日出生，汉族，住合肥市庐阳区。",
+                      "原告周俭诉被告苗健玮、方惠、安徽俊惠建筑装饰有限责任公司（以下简称“俊惠公司”）民间借贷纠纷一案，本院立案受理后，依法组成合议庭，公开开庭进行了审理。原告周俭的委托代理人刘玮，被告苗健玮到庭参加诉讼。被告方惠、俊惠公司经本院传票传唤无正当理由未庭参加诉讼。本案现已审理终结。"]
+          问题：出借人（原告）的名称是？
+          答案：周俭
+
+      样例 2：
+          目标角色：被告
+          目标属性：姓名名称
+          相关上下文：["被告：陈亚莉，女，1991年9月22日出生，汉族，住安徽省合肥市包河区。",
+          "被告：马郭保，男，1972年5月20日出生，汉族，住安徽省合肥市蜀山区。",
+          "原告王章发与被告陈亚莉、马郭保民间借贷纠纷一案，本院于2016年11月7日立案后，依法适用简易程序公开开庭进行了审理。原告王章发及其委托代理人陈叶艇，被告马郭保到庭参加诉讼，被告陈亚莉经本院传票传唤拒不到庭参加诉讼。本案现已审理终结。"]
+          问题：被告的名称是？
+          答案：陈亚莉、马郭保
+
+      看过了前面2个样例，现在到你实践了：
+          目标角色：{ROLE}
+          目标属性：姓名名称
+          相关上下文：{CONTEXT}
+          问题：{ROLE}的名称是？
+          答案：
+  
+  DataCell:
+    Instruction: |
+      你是一名{FIELD}相关的信息抽取专家，下面请你根据相关上下文提取{EXTRACTED}，要求如下：
+      （1）后文将在 "目标角色" 部分为你明确提供一个对象及其名称，请你只返回该对象直接相关的内容。
+      （2）后文将在 "目标字段" 部分为你明确提供要提取的该 目标角色 的一个{EXTRACTED}，并可能附带该属性的简短解释。
+      （3）后文将在 "取值范围" 中提供 "目标字段" 标准的取值格式或内容。
+      （4）后文将在 "相关上下文" 部分提供一些相关的原文片段信息，你所返回的 目标属性 值必须在 "相关上下文" 中存在信息并根据"取值范围"选择答案。如果不存在，则返回<NOT FOUND>；
+      （5）请你精练、直接地返回要求的目标字段值，不要有任何其他间接性的说明。如果你返回虚假的内容，你将被解雇。
+    Example: |
+      样例 1：
+          目标角色：郑吉清（原告（出借人））
+          目标字段：需返回本金总额（元）
+          取值范围：int
+          相关上下文：原告郑吉清向本院提出诉讼请求：两被告立即归还借款15万元，及自2016年12月19日至付清止的利息（月息2%），并承担诉讼费。
+          问题：原告（出借人）郑吉清诉称需返回本金总额（元）？
+          答案：150000
+
+      样例 2：
+          目标角色：安徽省合肥市包河区人民法院（法院）
+          目标字段：需返回本金总额（元）
+          取值范围：int
+          相关上下文：法院认定，这项借款虽然没有借条，但由于原告方提供了当天聊天记录，可以认定这是一笔借款，因此被告需要归还全部借款并清偿利息。
+          问题：安徽省合肥市包河区人民法院（法院）判定需返回本金总额（元）？
+          答案：150000
+      
+      样例 3：
+          目标角色：王守恒（被告（借款人））
+          目标字段：是否承担连带责任
+          取值范围：["是", "否"]
+          相关上下文：法院认定，这项借款虽然没有借条，但由于原告方提供了当天聊天记录，可以认定这是一笔借款，因此被告需要归还全部借款并清偿利息。
+          问题：王守恒（被告（借款人））辩称是否承担连带责任？
+          答案：<NOT FOUND>
+
+      看过了前面3个样例，现在到你实践了：
+          目标角色：{ROLE}
+          目标字段：{ATTRIBUTE}
+          取值范围：{SCOPE}
+          相关上下文：{CONTEXT}
+          问题：{ROLE} {PREDICATE} {ATTRIBUTE}？
+          答案：
+
+
+EN:
+  FirstColumn:      # entity name extract
+    Instruction: |
+      You are a inforamtion extractor for {FIELD}，now extract the name of target object from contexts，requirements are as follows：
+      1. An entity will be clearly provided for you in the "Target Entity" section, and some relevant original text fragment information will be provided in the "Context".
+      2. Target Entity：Refers to roles in the professional field, such as {ALL_ROLES}. If the target roles has multiple instance objects, please extract all names and return a list of separated by commas, such as "Chen Yali, Ma Baoguo, Wahaha Group".
+      3. Context: Refers to a text fragment that contains the name of the target character, and the name you return must exist in the 'Context'; If it does not exist, return <NOT FOUND> ;
+      4. Please refine and directly return the name of the target without any other indirect explanation. If you return false content, you will be fired.
+    Example: |
+      Example 1:
+          Target Entity：Team
+          Target Attribute: Name
+          Context：['Following Monday's 36 - point performance in the Pacers' loss to the Hornets, George has now scored a combined 70 points over his last two games and did so while shooting a scorching 27 - of - 44 (61 percent) from the field and 12 - of - 23 (52 percent) from behind the arc.']
+          Question：What's the name of the Team？
+          Answer：<NOT FOUND>
+
+      Example 2:
+          Target Entity：Restaurant
+          Target Attribute: Name
+          Context：The Mill is a pub providing English Food with Moderate price range.
+          Question：What's the name of the Restaurant？
+          Answer：The Mill
+
+      Your Turn:
+          Target Entity：{ROLE}
+          Target Attribute: Name
+          Context：{CONTEXT}
+          Question：What's the name of the {ROLE}？
+          Answer：
+  
+  DataCell:
+    Instruction: |
+      You are a inforamtion extractor for {FIELD}，Please extract {EXTRACTED} based on Context, with the following requirements:
+      1. An object and its name will be provided in the "Target Entity" section. Please only return the content directly related to that object.
+      2. The 'Attribute' section provides you with a {EXTRACTED} of the "Target Entity" you need to extract, and may include a brief explanation of the attribute.
+      3. The 'Scopes' section provides you with the standard value format or content for the "Attribute" 
+      4. The 'Context' section provides some relevant information, your answer must be contained in the 'Context' and be selected based on the 'Value Range'. If it does not exist, return <NOT FOUND>;
+      5. Please refine and directly return the required target field values without any other indirect explanations. If you return false content, you will be fired.
+    Example: |
+      Example 1:
+          Target Entity：Restaurant (The Mill)
+          Attribute: Price range
+          Scopes: ['More than £30', 'Cheap', 'Less than £20', '£20-25', 'Moderate', 'High']
+          Context: The Mill is a pub providing English Food with Moderate price range.
+          Question: What's the Price range of the Restaurant
+          Answer: Moderate
+    
+      Example 2:
+          Target Entity：Restaurant (The Mill)
+          Attribute: Customer rating
+          Scopes: ['5 out of 5', 'Low', 'Average', '3 out of 5', '1 out of 5', 'High'] 
+          Context: The Mill, a low price family friendly breakfast.
+          Question: What's the Customer rating of the Restaurant?
+          Answer: <NOT FOUND>
+
+      Example 3:
+          Target Entity：Team (The Bulls)
+          Attribute: Percentage of field goals
+          Scopes: int
+          Context: ['As a team, the Bulls shot a whopping 51 percent from the field and reached the free - throw line 35 times.']
+          Question: What's the Percentage of field goals of Team (The Bulls)?
+          Answer: 51
+
+      Your Turn:
+          Target Entity: {ROLE}
+          Attribute: {ATTRIBUTE}
+          Scopes: {SCOPE}
+          Context: {CONTEXT}
+          Question: What's the {ATTRIBUTE} of {ROLE} ?
+          Answer:

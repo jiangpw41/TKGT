@@ -1,5 +1,9 @@
 import logging
 import networkx as nx
+import json
+import pickle
+import pandas as pd
+
 import matplotlib
 import matplotlib.pyplot as plt
 import random
@@ -133,6 +137,49 @@ def visualize_knowledge_graph_interactive(kg):
                     )
     fig.show()
 
+
+def save_data( data, path ):
+    type = path.split(".")[-1]
+    if type == "text":
+        with open( path, 'w') as file:
+            for i in range(len(data)):
+                line = data[i]
+                file.write(line + '\n')
+    elif type == "json":
+        with open( path, "w", encoding="utf-8") as f:
+            json.dump( data, f,  ensure_ascii=False, indent=4)
+    elif type == "pickle":
+        with open( path, "wb") as f:
+            pickle.dump( data, f )
+    else:
+        raise Exception(f"{type}类型数据目前无法使用save_data保存")
+
+def load_data( path, type, header_None=False, sheet_name=False):
+    if type == "text":
+        texts = []
+        with open(path, 'r', encoding='utf-8') as file:
+            for line in file:
+                texts.append(line.strip())
+        return texts
+    elif type == "json":
+        with open( path, "r", encoding="utf-8") as f:
+            datas = json.load( f)
+        return datas
+    elif type == "pickle":
+        with open( path, "rb") as f:
+            datas = pickle.load( f)
+        return datas
+    elif type == "excel":
+        if header_None:
+            if sheet_name:
+                return pd.read_excel( path, header=None, sheet_name=sheet_name )
+            else:
+                return pd.read_excel( path, header=None )
+        else:
+            if sheet_name:
+                return pd.read_excel( path, sheet_name=sheet_name)
+            else:
+                return pd.read_excel( path)
 
 def read_text_to_list( path ):
     with open(path, 'r') as file:  

@@ -1,0 +1,29 @@
+---
+# 数据集配置
+DATASET_MANAGE:
+  train_test_ratio: [0.7, 0.3]                  # 微调、测试比，用于划分数据集为train和test
+  e2e:                                          # 数据集标准名称，一律小写
+    language: 'EN'                              # 数据集使用的语言类型，目前只有中英两种
+    field: "resturant comments"                 # 数据集涉及领域或数据集类型，用于提示词
+    extracted: "comments"                       # 数据集中要被采集的信息类型，用于提示词
+    ruled: False                                # 文本是否已经过规则组织，如果有，列表形式与原始文本一一对应，用于Hybird_RAG
+    pair: True                                  # 是否是text-table成对数据，一般训练数据都是True，应用数据没有table的为False
+    intro: 'A dataset of resturant comments'    # 人类友好的数据集介绍
+    path: '$PROJECT_ROOT/data/e2e'              # 数据集所在根目录
+  rotowire:
+    language: 'EN'
+    field: "basketball games statistics"
+    extracted: "statistics data"
+    ruled: False
+    pair: True
+    intro: 'A dataset of NBA basketball game'
+    path: '$PROJECT_ROOT/data/rotowire'
+  cpl:
+    language: 'ZH'
+    field: "民间借贷案件法院判决文书"
+    extracted: "对案件事实的陈述或认定"
+    ruled: True
+    pair: True
+    intro: 'A dataset of Chinese Private Lending'
+    path: '$PROJECT_ROOT/data/CPL'
+  # Plese add your datasets in the above format

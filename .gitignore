@@ -1,6 +1,7 @@
 **/__pycache__/
 **/.ipynb_checkpoints/
 **/*.log
+**/test.ipynb
 
 
 Mixed_IE/llm/not_important
@@ -10,7 +11,10 @@ Mixed_IE/further_processed/
 Mixed_IE/statistic/Similarity.pdf
 
 Hybird_RAG/predict/LLMInferenceServer/
-Hybird_RAG/prepare_data_model/
+Hybird_RAG/temp/
+Hybird_RAG/prompt_templates.py
+Hybird_RAG/retriver/all-MiniLM-L6-v2/
+Hybird_RAG/retriver/ms-marco-MiniLM-L-6-v2/
 Hybird_RAG/evaluation/result_show.ipynb
 Hybird_RAG/evaluation/predict_results/
 Hybird_RAG/evaluation/roberta-large/
@@ -19,10 +23,7 @@ Hybird_RAG/model_list.json
 
 data/rotowire/
 data/CPL/
-data/CPL.zip
 data/e2e/
-data/e2e.zip
-data/new_table.json
 raw/
 
 preprocess/
