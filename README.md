@@ -1,8 +1,20 @@
-cd /home/jiangpeiwen2/jiangpeiwen2/workspace/TKGT
-bash /home/jiangpeiwen2/jiangpeiwen2/workspace/TKGT/Hybird_RAG/2predict/parallel_predict.sh
-
 # TKGT
-This is the official code and data repository for the paper TKGT
+This is the official code and data repository for the paper TKGT.
+
+# Prepare
+Before starting, make sure that you have :
+- Installed vllm in a v-env called vllm and download below interface for fast and parallel inference, 
+```bash
+cd /TKGT/Hybird_RAG/predict
+git clone git@github.com:jiangpw41/LLMInferenceServer.git
+```
+- Installed llama-factory in a v-env called llama_factory for fine-tuning.
+- Installed nltk toolkit in a v-env called tkgt for first-stage and download nltk package under root dir
+- Installed env2.txt in a v-env called tkgt2 for second stage.
+- Downloaded a LLM (like chatglm3/4-6b) for Q&A
+- Downloaded embedding models for embedding and retreving
+  - "roberta-large" under TKGT/Hybird_RAG/evaluation for bert-score evaluation.
+  - "sentence-transformers/all-MiniLM-L6-v2" and "cross-encoder/ms-marco-MiniLM-L-6-v2" under TKGT/Hybird_RAG/retriever 
 
 
 # Dataset
@@ -13,13 +25,16 @@ We use the processed four datasets by https://github.com/shirley-wu/text_to_tabl
 As for the CPL dataset, as the original data involves privacy, we only provide processed dataset in "data".
 
 ## "Data"
-There are three datasets in table form stored in the "Data" directory from total five, and the remaining two (wikibio, wikitabletext) have no limited table fields. For details, please refer to the readme file in the "data" directory.
+There are three datasets in table form stored in the "data" directory from total five, and the remaining two (wikibio, wikitabletext) have no limited table fields. For details, please refer to the readme file in the "data" directory.
 
 # Mixed_IE
 The method of TKGT's first stage, which include paradigms of regulation, statistics, and DL.
 
 # KGs
-The semi-automatically constructed Knowledge Graph of datasets by human experts with the help of Mixed_IE.
+The semi-automatically constructed Knowledge Graph of datasets by human experts with the help of Mixed_IE. Based on KGs schema, prepare prompt list and ft data in batch.
 
 # Hybird-RAG
-Waiting...
+Using
+- rule-based (prior structural knowledge and regular matching) method and 
+- statistics-based (word frequency)
+- semantic-based (similarity)
