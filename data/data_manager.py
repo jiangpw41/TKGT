@@ -1,16 +1,15 @@
 from tqdm import tqdm
 import pandas as pd
 import pickle
-import json
+import argparse
 import os
 import sys
-import random
-random.seed(42)
+
 
 _ROOT_PATH = os.path.dirname( os.path.dirname( os.path.abspath(__file__) ) )
 sys.path.insert( 0, _ROOT_PATH)
 from config_loader import config_data
-from utils import load_data, save_data
+from utils import load_data, save_data, get_shuffle_index
 from data.dataset_specific import load_e2e, load_rotowire, load_cpl
 
 def data_split( data, train_test_ratio, indices ):
@@ -23,9 +22,15 @@ def data_split( data, train_test_ratio, indices ):
     for i in range( total_length ):
         index = indices[i]
         if i<train_length:
-            train.append( data[index] )
+            try:
+                train.append( data[index] )
+            except:
+                train.append( data[ str(index) ] )
         else:
-            test.append( data[index] )
+            try:
+                test.append( data[index] )
+            except:
+                test.append( data[ str(index) ] )
     
     return train, test
 
@@ -90,25 +95,20 @@ class DataManager():
                 return "Load"
             else:
                 raise Exception( f"错误：{self.data_dir}目录下既不存在处理完毕的数据，也不存在源文件夹！")
-    
-    def get_shuffle_index( self, texts ):
-        total_length = len(texts)
-        indices = list(range(total_length))
-        random.shuffle(indices)
-        return indices
+
 
     #（2）重新处理
     def process(self):
         # 加载原始数据集
         if self.dataset_name == "e2e":
             texts, tables = load_e2e( self.data_dir, load_data)
-            indices = self.get_shuffle_index( texts, tables )
+            indices = get_shuffle_index( texts )
             train_text, test_text = data_split( texts, self.train_test_ratio, indices)
             train_table, test_table = data_split( tables, self.train_test_ratio, indices )
             data_save_four( train_text, test_text, train_table, test_table, self.data_dir )
         elif self.dataset_name == "rotowire":
             texts, tables = load_rotowire( self.data_dir, load_data)
-            indices = self.get_shuffle_index( texts )
+            indices = get_shuffle_index( texts )
             train_text, test_text = data_split( texts, self.train_test_ratio, indices )
             train_first_team, test_first_team = data_split( tables["FirstColumn"]["Team"], self.train_test_ratio, indices )
             train_first_player, test_first_player = data_split( tables["FirstColumn"]["Player"], self.train_test_ratio, indices )
@@ -136,8 +136,9 @@ class DataManager():
             }
             data_save_four( train_text, test_text, train_table, test_table, self.data_dir )
         elif self.dataset_name == "cpl":
-            texts, tables = load_cpl( self.data_dir, load_data)
-            indices = self.get_shuffle_index( texts, tables )
+            # 修改路径以从不同地方加载
+            texts, tables = load_cpl( self.data_dir, load_data, "original_3_times")
+            indices = get_shuffle_index( texts )
             train_text, test_text = data_split( texts, self.train_test_ratio, indices )
             train_first, test_first = data_split( tables["FirstColumn"], self.train_test_ratio, indices )
             train_cell, test_cell = data_split( tables["DataCell"], self.train_test_ratio, indices )
@@ -172,18 +173,31 @@ class DataManager():
         elif self.part == "application":
             application_texts = load_data( os.path.join( self.data_dir, "application.text"), "text")
             return application_texts
+        else:
+            raise Exception(f"{self.part}模式不存在")
 
 
     def main(self):
         # （1）检查路径下是否已经存在准备好的数据，如果是的，直接加载；否则，全部重新处理该数据集
-        check_result = self.exist_file_check()
+        if self.resplit:
+            check_result = "Process"
+        else:
+            check_result = self.exist_file_check()
         if check_result == "Process":
             self.process()
         return self.load()  # text, table || train, test
 
 if __name__=="__main__":
-    # data_manager = DataManager( "e2e" )   # \
-    data_manager = DataManager( "rotowire")   # \
-    # data_manager = DataManager( "cpl" )   # 
+    parser = argparse.ArgumentParser(description="Run script with external arguments")
+    parser.add_argument('--dataset_name', type=str, required=True, help='数据集名')
+    parser.add_argument('--resplit', type=int, required=False, help='是否忽略现有文件重新覆盖生成')     # 1时覆盖
+    args = parser.parse_args()
+    dataset_name = args.dataset_name
+    resplit = False if args.resplit==0 else True
+    """
+    dataset_name = "e2e"
+    resplit = True
+    """
+    data_manager = DataManager( dataset_name, resplit = resplit)
     data = data_manager.main()
     print("s")

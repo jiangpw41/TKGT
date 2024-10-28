@@ -1,6 +1,72 @@
 
 __all__=["rotowire_kg_schema"]
 
+rotowire_total_team_name = {'76ers',
+ 'Bucks',
+ 'Bulls',
+ 'Cavaliers',
+ 'Celtics',
+ 'Clippers',
+ 'Grizzlies',
+ 'Hawks',
+ 'Heat',
+ 'Hornets',
+ 'Jazz',
+ 'Kings',
+ 'Knicks',
+ 'Lakers',
+ 'Magic',
+ 'Mavericks',
+ 'Nets',
+ 'Nuggets',
+ 'Pacers',
+ 'Pelicans',
+ 'Pistons',
+ 'Raptors',
+ 'Rockets',
+ 'Spurs',
+ 'Suns',
+ 'Thunder',
+ 'Timberwolves',
+ 'TrailBlazers',
+ 'Warriors',
+ 'Wizards'}
+
+total_team_city_map = {
+    "Orleans" : "Pelicans",
+    "Phoenix": "Suns",
+    "Dallas": "Mavericks",
+    "Orlando": "Magic",
+    "Atlanta": "Hawks",
+    "Cleveland": "Cavaliers",
+    "Brooklyn": "Nets",
+    "Angeles": "Lakers",
+    "Milwaukee ": "Bucks",
+    "Utah": "Jazz",
+    "Denver": "Nuggets",
+    "Antonio": "Spurs",
+    "Indiana": "Pacers",
+    "York": "Knicks",
+    "Sixers": "76ers",
+    "Detroit": "Pistons",
+    "Houston": "Rockets",
+    "Cavs": "Cavaliers",
+    "Sacramento": "Kings",
+    "City": "Thunder",
+    "Minnesota ": "Timberwolves",
+    "Charlotte": "Hornets",
+    "Philadelphia": "76ers",
+    "Chicago" : "Bulls",
+    "Miami": "Heat",
+    "Memphis": "Grizzlies",
+    "Portland": "TrailBlazers",
+    "Toronto": "Raptors",
+    "Boston": "Celtics",
+    "Golden State": "Warriors",
+    "Washington": "Wizards"
+    
+}
+
 rotowire_value_range = {
     "String" : str,
     "Number" : int
@@ -51,6 +117,8 @@ player_attr = {
 
 kg_schema = {
     "intro" : "It's a Knowledge Graph of the NBA basketball game, each graph contains as least two teams and several players' infomation.",
+    "entity_type" : "multi_entity",        # "single_entity", or "multi_entity"
+    "event_type" : "static",        # 完全静态如E2E和Rotowire的属性"static", 属性类化可多次可迭代成整体的"dynamic"
     "entity":{
         "Team":{
             "number": (1,2),     # 左右一样表示固定数量，左小右大表示闭区间取值范围，左大右小表示>=

@@ -1,160 +1,230 @@
-from cpl_value_range import value_range, Thing_class
-
+from cpl_value_range import*
+from copy import deepcopy
+from collections import OrderedDict
 
 __all__=["cpl_kg_schema"]
 
 
 # Row_Name角色类型：-1为任意（可以0和多个），0表示至少一个，>0为准确数
-Court_determination_attributes = {
-    "姓名名称" : value_range["字符串"],
-    # 诉讼请求：围绕原告诉讼请求，被告可能辩称，法院则可能驳回、支持等
-    "诉讼请求":{
-        "是否变更诉讼请求" : value_range["是否"],
-        "需返回本金总额" : value_range["金额"],
-        "需返回利息" : [Thing_class["required_interest_class"]],
-        "需返回逾期利息" : [Thing_class["required_interest_class"]],
-        "需返回违约金" : [Thing_class["required_damages_class"]],
-        "是否要求承担担保责任" :[Thing_class["guarantee_liability_class"]],     # 为空则不要求，否则列表形式
-        "需返回债权实现费用（起诉前）" : Thing_class["debt_realization_costs_class"],
-        "需返回债权实现费用（起诉后）" : Thing_class["debt_realization_costs_class"],
-    },
-    # 借款事件：含各方对借款事实信息、约定事实信息、交付与还款事实信息的陈述
-    "借贷事件":{
-            # 借款事实信息
-        "借贷信息":{
-            "借款目的与用途" : value_range["借款用途"],
-            "借款人与出借人关系类型" : value_range["借款人与出借人关系类型"],
-            "担保人的姓名或单位名称" : value_range["字符串"],
-            "借款人与担保人关系类型" : value_range["借款人与出借人关系类型"],
-            "意思表示日" : value_range["日期值"],
-            "借款次数" : value_range["数值"],
-            "借款次数情况" : value_range["借款次数情况"],
-            "是否有借款凭证" : [Thing_class["voucher_class"]],
-        },
-            # 约定事实信息
-        "约定信息":{
-            "约定的借款金额" : [Thing_class["agreed_lend_money_class"]],
-            "约定的还款日期或借款期限" : [Thing_class["agreed_return_data_class"]],
-            "约定的利息" : [Thing_class["agreed_interest_class"]],
-            "约定的逾期利息" : [Thing_class["agreed_interest_class"]],
-            "约定的违约金" : [Thing_class["agreed_damages_class"]],
-            "管辖约定情况" : value_range["约定情况"],
-            "仲裁约定情况" : value_range["约定情况"],
-            "程序性费用的承担（律师费、诉讼费等）约定" : Thing_class["agreed_procedure_cost_class"],
-            "约定的还款方式" : [Thing_class["agreed_return_methods_class"]],
-            "约定的担保" : [Thing_class["agreed_guarantee_class"]],
-        },
-            # 交付与还款事实信息
-        "还款信息":{
-            "借款实际交付" : [Thing_class["actual_delivery_class"]],
-            "已还款总体情况类型" : value_range["已还款总体情况类型"],
-            "已还款" : [Thing_class["repaid_class"]],
-        }
-    },
-    # 专题问题：案件文本中关于特殊问题的部分
-    "专题问题":{
-        "夫妻共同债务": value_range["法院对夫妻债务的认定"],
-        "砍头息" : value_range["法院对砍头息的认定"],
-        "公司为股东担保" : value_range["法院对公司为股东担保的效力的认定"],
-        "债权/债务非原始取得" : value_range["法院对夫妻债务的认定"],
-        "出借人主体资格问题" : value_range["法院对主体资格与合同效力的认定"],
-        "职业放贷人" : value_range["法院对职业放贷人的认定"],
-        "互联网平台责任" : value_range["是否"],
-        "民刑交叉" : value_range["法院对民事案件的处理程序"],
-        "利率调整、认定" : value_range["字段原文"],
-    }
-}
 
-Plaintiff_claim_attributes = {
-    "姓名名称" : value_range["字符串"],
-    # 诉讼请求：围绕原告诉讼请求，被告可能辩称，法院则可能驳回、支持等
-    "诉讼请求":{
-        "是否变更诉讼请求" : value_range["是否"],
-        "需返回本金总额" : value_range["金额"],
-        "需返回利息" : [Thing_class["required_interest_class"]],
-        "需返回逾期利息" : [Thing_class["required_interest_class"]],
-        "需返回违约金" : [Thing_class["required_damages_class"]],
-        "是否要求承担担保责任" :[Thing_class["guarantee_liability_class"]],     # 为空则不要求，否则列表形式
-        "需返回债权实现费用（起诉前）" : Thing_class["debt_realization_costs_class"],
-        "需返回债权实现费用（起诉后）" : Thing_class["debt_realization_costs_class"],
-    },
-    # 借款事件：含各方对借款事实信息、约定事实信息、交付与还款事实信息的陈述
-    "借贷事件":{
-            # 借款事实信息
-        "借贷信息":{
-            "借款目的与用途" : value_range["借款用途"],
-            "借款人与出借人关系类型" : value_range["借款人与出借人关系类型"],
-            "担保人的姓名或单位名称" : value_range["字符串"],
-            "借款人与担保人关系类型" : value_range["借款人与出借人关系类型"],
-            "意思表示日" : value_range["日期值"],
-            "借款次数" : value_range["数值"],
-            "借款次数情况" : value_range["借款次数情况"],
-            "是否有借款凭证" : [Thing_class["voucher_class"]],
-        },
-            # 约定事实信息
-        "约定信息":{
-            "约定的借款金额" : [Thing_class["agreed_lend_money_class"]],
-            "约定的还款日期或借款期限" : [Thing_class["agreed_return_data_class"]],
-            "约定的利息" : [Thing_class["agreed_interest_class"]],
-            "约定的逾期利息" : [Thing_class["agreed_interest_class"]],
-            "约定的违约金" : [Thing_class["agreed_damages_class"]],
-            "管辖约定情况" : value_range["约定情况"],
-            "仲裁约定情况" : value_range["约定情况"],
-            "程序性费用的承担（律师费、诉讼费等）约定" : Thing_class["agreed_procedure_cost_class"],
-            "约定的还款方式" : [Thing_class["agreed_return_methods_class"]],
-            "约定的担保" : [Thing_class["agreed_guarantee_class"]],
-        },
-            # 交付与还款事实信息
-        "还款信息":{
-            "借款实际交付" : [Thing_class["actual_delivery_class"]],
-            "已还款总体情况类型" : value_range["已还款总体情况类型"],
-            "已还款" : [Thing_class["repaid_class"]],
-        }
-    }
-}
+special_part = OrderedDict({
+    
+})
 
-Defendant_argue_attributes = {
+
+Plaintiff_claim_attributes = OrderedDict({
     "姓名名称" : value_range["字符串"],
-    # 诉讼请求：围绕原告诉讼请求，被告可能辩称，法院则可能驳回、支持等
+    # 诉讼请求
     "是否变更诉讼请求" : value_range["是否"],
-    "需返回本金总额" : value_range["金额"],
-    "需返回利息" : [Thing_class["required_interest_class"]],
-    "需返回逾期利息" : [Thing_class["required_interest_class"]],
-    "需返回违约金" : [Thing_class["required_damages_class"]],
-    "是否要求承担担保责任" :[Thing_class["guarantee_liability_class"]],     # 为空则不要求，否则列表形式
-    "需返回债权实现费用（起诉前）" : Thing_class["debt_realization_costs_class"],
-    "需返回债权实现费用（起诉后）" : Thing_class["debt_realization_costs_class"],
-
-    # 借款事件：含各方对借款事实信息、约定事实信息、交付与还款事实信息的陈述
-        # 借款事实信息
-    "借款目的与用途" : value_range["借款用途"],
+    "需返回本金总额（元）" : value_range["金额"],
+    '需返回利息总额（元）' : value_range["金额"],
+    '需返回利息计算起始日期' : value_range["日期值"],
+    '需返回利息计算起始日期类型' : value_range["起始日期类型"],
+    '需返回利息计算截止日期' : value_range["日期值"],
+    '需返回利息计算截止日期类型' : value_range["截止日期类型"],
+    '需返还利息率类型' : value_range["利率类型"],
+    '需返还利息率数值（百分比或元）' : value_range["率数值"],
+    '需返回逾期利息总额（元）' : value_range["金额"],
+    '需返回逾期利息计算起始日期' : value_range["日期值"],
+    '需返回逾期利息计算起始日期类型' : value_range["起始日期类型"],
+    '需返回逾期利息计算截止日期' : value_range["日期值"],
+    '需返回逾期利息计算截止日期类型' : value_range["截止日期类型"],
+    '需返还逾期利息率类型' : value_range["利率类型"],
+    '需返还逾期利息率数值（百分比或元）' : value_range["率数值"],
+    '需返回违约金总额（元）' : value_range["金额"],
+    '需返回违约金计算起始日期' : value_range["日期值"],
+    '需返回违约金计算起始日期类型' : value_range["起始日期类型"],
+    '需返回违约金计算截止日期' : value_range["日期值"],
+    '需返回违约金计算截止日期类型' : value_range["截止日期类型"],
+    '需返还违约金类型' : value_range["利率类型"],
+    '需返还违约金数值（百分比或元）' : value_range["率数值"],
+    '是否要求承担担保责任' : value_range["是否"],
+    '承担保证责任的人或单位名称' : value_range["字符串"],
+    '保证责任类型' : value_range["担保责任类型"],
+    '需返回债权实现费用（起诉前）总额（元）' : value_range["金额"],
+    '需返回债权实现费用（起诉前）类型' : value_range["费用类型"],
+    '需返回债权实现费用（起诉后）总额（元）' : value_range["金额"],
+    '需返回债权实现费用（起诉后）类型' : value_range["费用类型"],
+    
+    # 借贷事件
+    # 借款事实信息
+    "借款目的与用途类型" : value_range["借款用途"],
     "借款人与出借人关系类型" : value_range["借款人与出借人关系类型"],
     "担保人的姓名或单位名称" : value_range["字符串"],
     "借款人与担保人关系类型" : value_range["借款人与出借人关系类型"],
     "意思表示日" : value_range["日期值"],
     "借款次数" : value_range["数值"],
     "借款次数情况" : value_range["借款次数情况"],
-    "是否有借款凭证" : [Thing_class["voucher_class"]],
-        # 约定事实信息
-    "约定的借款金额" : [Thing_class["agreed_lend_money_class"]],
-    "约定的还款日期或借款期限" : [Thing_class["agreed_return_data_class"]],
-    "约定的利息" : [Thing_class["agreed_interest_class"]],
-    "约定的逾期利息" : [Thing_class["agreed_interest_class"]],
-    "约定的违约金" : [Thing_class["agreed_damages_class"]],
-    "管辖约定情况" : value_range["约定情况"],
-    "仲裁约定情况" : value_range["约定情况"],
-    "程序性费用的承担（律师费、诉讼费等）约定" : Thing_class["agreed_procedure_cost_class"],
-    "约定的还款方式" : [Thing_class["agreed_return_methods_class"]],
-    "约定的担保" : [Thing_class["agreed_guarantee_class"]],
-        # 交付与还款事实信息
-    "借款实际交付" : [Thing_class["actual_delivery_class"]],
-    "已还款总体情况类型" : value_range["已还款总体情况类型"],
-    "已还款" : [Thing_class["repaid_class"]],
-}
+    "是否有借款凭证" : value_range["是否"],
+    # 约定事实信息
+    '借款凭证1名称' : value_range["字符串"],
+    '借款凭证1类型' : value_range["借款凭证类型"],
+    '借款凭证1出具时间' : value_range["日期值"],
+    '借款凭证1所载内容' : value_range["字符串"],
+    '借款凭证2名称' : value_range["字符串"],
+    '借款凭证2类型' : value_range["借款凭证类型"],
+    '借款凭证2出具时间' : value_range["日期值"],
+    '借款凭证2所载内容' : value_range["字符串"],
+    '借款凭证3名称' : value_range["字符串"],
+    '借款凭证3类型' : value_range["借款凭证类型"],
+    '借款凭证3出具时间' : value_range["日期值"],
+    '借款凭证3所载内容' : value_range["字符串"],
+    '初始约定的借款金额情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的借款金额（元）' : value_range["金额"],
+    '第2次约定的借款金额情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的借款金额（元）' : value_range["金额"],
+    '第3次约定的借款金额情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的借款金额（元）' : value_range["金额"],
+    '初始约定的还款日期或借款期限情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的借款起始日期' : value_range["日期值"],
+    '初始约定的还款日期' : value_range["日期值"],
+    '初始约定的借款期限（月）' : value_range["数值"],
+    '第2次约定的还款日期或借款期限情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的借款起始日期' : value_range["日期值"],
+    '第2次约定的还款日期' : value_range["日期值"],
+    '第2次约定的借款期限（月）' : value_range["数值"],
+    '第3次约定的还款日期或借款期限情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的借款起始日期' : value_range["日期值"],
+    '第3次约定的还款日期' : value_range["日期值"],
+    '第3次约定的借款期限（月）' : value_range["数值"],
+    '初始约定的利息情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的利率类型' : value_range["利率类型"],
+    '初始约定的利率数值（百分比或元）' : value_range["率数值"],
+    '第2次约定的利息情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的利率类型' : value_range["利率类型"],
+    '第2次约定的利率数值（百分比或元）' : value_range["率数值"],
+    '第3次约定的利息情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的利率类型' : value_range["利率类型"],
+    '第3次约定的利率数值（百分比或元）' : value_range["率数值"],
+    '初始约定的逾期利息情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的逾期利率类型' : value_range["利率类型"],
+    '初始约定的逾期利率数值（百分比或元）' : value_range["率数值"],
+    '第2次约定的逾期利息情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的逾期利率类型' : value_range["利率类型"],
+    '第2次约定的逾期利率数值（百分比或元）' : value_range["率数值"],
+    '第3次约定的逾期利息情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的逾期利率类型' : value_range["利率类型"],
+    '第3次约定的逾期利率数值（百分比或元）' : value_range["率数值"],
+    '初始约定的违约金情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的违约金类型' : value_range["利率类型"],
+    '初始约定的违约金数值（百分比或元）' : value_range["率数值"],
+    '第2次约定的违约金情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的违约金类型' : value_range["利率类型"],
+    '第2次约定的违约金数值（百分比或元）' : value_range["率数值"],
+    '第3次约定的违约金情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的违约金类型' : value_range["利率类型"],
+    '第3次约定的违约金数值（百分比或元）' : value_range["率数值"],
+    '管辖约定情况' : value_range["约定情况"],
+    '仲裁约定情况' : value_range["约定情况"],
+    '程序性费用的承担（律师费、诉讼费等）约定情况' : value_range["约定情况"],
+    '约定程序性费用承担情况类型' : value_range["约定程序性费用承担情况类型"],
+    '初始约定的还款方式情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的本金还款方式' : value_range["约定还款方式类型"],
+    '初始约定的利息还款方式' : value_range["约定还款方式类型"],
+    '前述还款方式下每次还款总金额（元）' : value_range["金额"],
+    '前述还款方式下每次还款日期' : value_range["日期值"],
+    '第2次约定的还款方式情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的本金还款方式' : value_range["约定还款方式类型"],
+    '第2次约定的利息还款方式' : value_range["约定还款方式类型"],
+    '前述还款方式下每次还款总金额（元）' : value_range["金额"],
+    '前述还款方式下每次还款日期' : value_range["日期值"],
+    '第3次约定的还款方式情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的本金还款方式' : value_range["约定还款方式类型"],
+    '第3次约定的利息还款方式' : value_range["约定还款方式类型"],
+    '前述还款方式下每次还款总金额（元）' : value_range["金额"],
+    '前述还款方式下每次还款日期' : value_range["日期值"],
+    '初始约定的担保情况' : value_range["约定情况"],
+    '初始约定的实际发生时间' : value_range["日期值"],
+    '初始约定的担保方式类型' : value_range["担保方式类型"],
+    '初始约定的担保范围' : value_range["字符串"],
+    '初始约定的担保期限（月）' : value_range["金额"],
+    '担保物当下状态' : value_range["字符串"],
+    '初始约定的担保人类型' : value_range["担保人类型"],
+    '初始约定的保证责任类型' : value_range["担保责任类型"],
+    '第2次约定的担保情况' : value_range["约定情况"],
+    '第2次约定的实际发生时间' : value_range["日期值"],
+    '第2次约定的担保方式类型' : value_range["担保方式类型"],
+    '第2次约定的担保范围' : value_range["字符串"],
+    '第2次约定的担保期限（月）' : value_range["金额"],
+    '担保物当下状态' : value_range["字符串"],
+    '第2次约定的担保人类型' : value_range["担保人类型"],
+    '第2次约定的保证责任类型' : value_range["担保责任类型"],
+    '第3次约定的担保情况' : value_range["约定情况"],
+    '第3次约定的实际发生时间' : value_range["日期值"],
+    '第3次约定的担保方式类型' : value_range["担保方式类型"],
+    '第3次约定的担保范围' : value_range["字符串"],
+    '第3次约定的担保期限（月）' : value_range["金额"],
+    '担保物当下状态' : value_range["字符串"],
+    '第3次约定的担保人类型' : value_range["担保人类型"],
+    '第3次约定的保证责任类型' : value_range["担保责任类型"],
+    '借款实际交付金额1（元）' : value_range["金额"],
+    '借款实际交付时间1' : value_range["日期值"],
+    '借款实际交付方式类型1' : value_range["交付方式类型"],
+    '借款实际交付1所对应的是第几笔借款' : value_range["数值"],
+    '借款实际交付金额2（元）' : value_range["金额"],
+    '借款实际交付时间2' : value_range["日期值"],
+    '借款实际交付方式类型2' : value_range["交付方式类型"],
+    '借款实际交付2所对应的是第几笔借款' : value_range["数值"],
+    '借款实际交付金额3（元）' : value_range["金额"],
+    '借款实际交付时间3' : value_range["日期值"],
+    '借款实际交付方式类型3' : value_range["交付方式类型"],
+    '借款实际交付3所对应的是第几笔借款' : value_range["数值"],
+    '已还款总体情况类型' : value_range["已还款总体情况类型"],
+    '已还款时间1' : value_range["日期值"],
+    '已还款金额1（元）' : value_range["金额"],
+    '已还款方式1' : value_range["交付方式类型"],
+    '已还款金额性质1' : value_range["金额性质"],
+    '已还款金额1所对应的是第几笔借款' : value_range["数值"],
+    '已还款金额1所冲抵利息至哪一日' : value_range["日期值"],
+    '已还款时间2' : value_range["日期值"],
+    '已还款金额2（元）' : value_range["金额"],
+    '已还款方式2' : value_range["交付方式类型"],
+    '已还款金额性质2' : value_range["金额性质"],
+    '已还款金额2所对应的是第几笔借款' : value_range["数值"],
+    '已还款金额2所冲抵利息至哪一日' : value_range["日期值"],
+    '已还款时间3' : value_range["日期值"],
+    '已还款金额3（元）' : value_range["金额"],
+    '已还款方式3' : value_range["交付方式类型"],
+    '已还款金额性质3' : value_range["金额性质"],
+    '已还款金额3所对应的是第几笔借款' : value_range["数值"],
+    '已还款金额3所冲抵利息至哪一日' : value_range["日期值"],
+    # 特殊
+    "法院对夫妻债务的认定": value_range["法院对夫妻债务的认定"],
+    "法院对砍头息的认定" : value_range["法院对砍头息的认定"],
+    "法院对公司为股东担保的效力的认定" : value_range["法院对公司为股东担保的效力的认定"],
+    "债权取得类型" : value_range["债权取得类型"],
+    "法院对主体资格与合同效力的认定" : value_range["法院对主体资格与合同效力的认定"],
+    "法院对职业放贷人的认定" : value_range["法院对职业放贷人的认定"],
+    "法院对是否属于互联网平台责任的认定" : value_range["是否"],
+    "法院对民事案件的处理程序" : value_range["法院对民事案件的处理程序"],
+})
 
+Defendant_argue_attributes = deepcopy(Plaintiff_claim_attributes)
+
+Court_determination_attributes = deepcopy(Plaintiff_claim_attributes)
 
 kg_schema = {
     "intro" : "这是一个关于民间借贷案件裁判文书的知识图谱，图中有法院、原告（出借人）、被告（借款人或担保人）三类实体，实体的属性包括各方的基本信息和对案件事实的不同视角的称述。其中由原告提起诉讼并陈述，被告可以对任何一点进行抗辩，法庭则需要查明事实并最终裁决。",
+    "entity_type" : "multi_entity",        # "single_entity", or "multi_entity"
+    "event_type" : "static",        # 完全静态如E2E和Rotowire的属性"static", 属性类化可多次可迭代成整体的"dynamic"
     "entity":{
         "法院":{
             "number": (1,1),

@@ -1,6 +1,41 @@
 ---
 # 提示词的中英文版本
 ZH:
+  SingleEntity:
+    Instruction: |
+      您是｛Field｝相关信息提取方面的专家。请按照以下要求从原始文本中提取{ROLE}对象的属性：
+      （1） 以下文本将在“目标属性”部分明确指定要提取的属性；在“上下文”部分，您将从原始文本中获得一些相关片段；
+      （2） “取值范围”部分将为您提供答案选项，如[北方, 南方]，或答案类型，如<class 'str'>和<class 'int'>。
+      （3） 您返回的属性必须严格依照“上下文”和“取值范围”；如果它不存在或与任何选项都不匹配，请返回“<NOT FOUND>”。
+      （4） 请诚实、简洁、直接地返回{ROLE}对象的目标属性，而无需任何其他间接解释。如果你返回虚假内容，你将被解雇。
+    Example: |
+      示例1：
+      目标属性：价格范围
+      范围：[超过30英镑，便宜，低于20英镑，20-25，中等，高]
+      背景：The Mill是一家酒吧，提供价格适中的英国美食。
+      问：这家餐厅的价格范围是多少
+      答案：中等
+      
+      示例2：
+      目标属性：客户评级
+      范围：[5/5，低，一般，3/5，1/5，高]
+      背景：磨坊，一种价格低廉的家庭友好早餐。
+      问：这家餐厅的顾客评价如何？
+      答案：<NOT FOUND>
+
+      示例3：
+      目标属性：名称
+      适用范围：<class 'str'>
+      背景：磨坊，一种价格低廉的家庭友好早餐。
+      问：餐厅叫什么名字？
+      答案：磨坊
+
+      轮到你了：
+      目标属性：{ATTRIBUTE}
+      范围：{SCOPE}
+      上下文：{CONTEXT}
+      问：{{ROLE}}的{ATTRIBUTE}是什么？
+
   FirstColumn:      # 实体名称提取
     Instruction: |
       你是一名{FIELD}相关的信息抽取专家，下面请你根据相关上下文提取指定对象的名称，要求如下：
@@ -76,6 +111,49 @@ ZH:
 
 
 EN:
+  SingleEntity:
+    Instruction: |
+      You are an information extractor related to {FIELD}. Please extract the attributes of {ROLE} from the Context:
+      (1) The "Target Attributes" part is the attribute to be extracted; 
+      (2) The 'Context' contained the attribute information, your answer will be from it.
+      (3) The "Scope" contains answer options such as ["North", "South"], or answer types such as <class 'str'> and <class 'int'>.
+      (4) You must strictly response according to the 'Context' and "Scopes"; If 'Context' part has no answer suitable, return '<NOT FOUND>'.
+      (5) Please concisely, and directly return the attribute value without any other indirect explanation, or you will be fired.
+    Example: |
+      Target Attribute: {ATTRIBUTE}
+      Scopes: {SCOPE}
+      Context：{CONTEXT}
+      Question：What is the {ATTRIBUTE} of the {ROLE}？
+      Answer：
+    Example_1: |
+      Example 1:
+          Target Attribute: Price range
+          Scopes: [More than £30, Cheap, Less than £20, £20-25, Moderate, High]
+          Context: The Mill is a pub providing English Food with Moderate price range.
+          Question: What is the Price range of the Restaurant
+          Answer: Moderate
+  
+      Example 2:
+          Target Attribute: Customer rating
+          Scopes: [5 out of 5, Low, Average, 3 out of 5, 1 out of 5, High] 
+          Context: The Mill, a low price family friendly breakfast.
+          Question: What is the Customer rating of the Restaurant?
+          Answer: <NOT FOUND>
+      
+      Example 3:
+          Target Attribute: Name
+          Scopes: <class 'str'>
+          Context: The Mill, a low price family friendly breakfast.
+          Question: What is the Name of the Restaurant?
+          Answer: The Mill
+
+      Your Turn:
+          Target Attribute: {ATTRIBUTE}
+          Scopes: {SCOPE}
+          Context：{CONTEXT}
+          Question：What is the {ATTRIBUTE} of the {ROLE}？
+          Answer：
+
   FirstColumn:      # entity name extract
     Instruction: |
       You are a inforamtion extractor for {FIELD}，now extract the name of target object from contexts，requirements are as follows：
@@ -87,7 +165,7 @@ EN:
       Example 1:
           Target Entity：Team
           Target Attribute: Name
-          Context：['Following Monday's 36 - point performance in the Pacers' loss to the Hornets, George has now scored a combined 70 points over his last two games and did so while shooting a scorching 27 - of - 44 (61 percent) from the field and 12 - of - 23 (52 percent) from behind the arc.']
+          Context：[Following Monday's 36 - point performance in the Pacers' loss to the Hornets, George has now scored a combined 70 points over his last two games and did so while shooting a scorching 27 - of - 44 (61 percent) from the field and 12 - of - 23 (52 percent) from behind the arc.]
           Question：What's the name of the Team？
           Answer：<NOT FOUND>
 
@@ -107,7 +185,7 @@ EN:
   
   DataCell:
     Instruction: |
-      You are a inforamtion extractor for {FIELD}，Please extract {EXTRACTED} based on Context, with the following requirements:
+      You are a inforamtion extractor for {FIELD}, please extract {EXTRACTED} based on Context, with the following requirements:
       1. An object and its name will be provided in the "Target Entity" section. Please only return the content directly related to that object.
       2. The 'Attribute' section provides you with a {EXTRACTED} of the "Target Entity" you need to extract, and may include a brief explanation of the attribute.
       3. The 'Scopes' section provides you with the standard value format or content for the "Attribute" 
@@ -117,7 +195,7 @@ EN:
       Example 1:
           Target Entity：Restaurant (The Mill)
           Attribute: Price range
-          Scopes: ['More than £30', 'Cheap', 'Less than £20', '£20-25', 'Moderate', 'High']
+          Scopes: [More than £30, Cheap, Less than £20, £20-25, Moderate, High]
           Context: The Mill is a pub providing English Food with Moderate price range.
           Question: What's the Price range of the Restaurant
           Answer: Moderate
@@ -125,7 +203,7 @@ EN:
       Example 2:
           Target Entity：Restaurant (The Mill)
           Attribute: Customer rating
-          Scopes: ['5 out of 5', 'Low', 'Average', '3 out of 5', '1 out of 5', 'High'] 
+          Scopes: [5 out of 5, Low, Average, 3 out of 5, 1 out of 5, High] 
           Context: The Mill, a low price family friendly breakfast.
           Question: What's the Customer rating of the Restaurant?
           Answer: <NOT FOUND>

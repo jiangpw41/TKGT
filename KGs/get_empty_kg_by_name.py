@@ -1,7 +1,7 @@
 import os
 import sys
-import yaml
 import importlib
+from copy import deepcopy
 from .KG_class import DomainKnowledgeGraph
 
 _ROOT_PATH = os.path.abspath(__file__)
@@ -23,8 +23,15 @@ def get_schema( dataset_name ):
         else:  
             raise ImportError(f"No valid 'kg_schema' dictionary found in module '{dataset_name}'") 
     
-def return_kg( dataset_name ):
+def return_kg( dataset_name, subtable_name=None):
     kg_schema = get_schema( dataset_name )
-    kg = DomainKnowledgeGraph( kg_schema, config_data["DATASET_MANAGE"][dataset_name]["language"] )
+    if subtable_name==None:
+        kg = DomainKnowledgeGraph( kg_schema, config_data["DATASET_MANAGE"][dataset_name]["language"] )
+    else:
+        new_kg_schema = deepcopy( kg_schema )
+        new_kg_schema["entity"] = {
+            subtable_name: kg_schema["entity"][subtable_name]
+        }
+        kg = DomainKnowledgeGraph( new_kg_schema, config_data["DATASET_MANAGE"][dataset_name]["language"] )
     return kg
 

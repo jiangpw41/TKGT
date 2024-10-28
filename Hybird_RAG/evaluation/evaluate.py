@@ -18,10 +18,11 @@ from sacrebleu import sentence_chrf
 import bert_score
 
 
-_Hybird_RAG_PATH = os.path.abspath(__file__)
-for i in range(2):
-    _Hybird_RAG_PATH = os.path.dirname( _Hybird_RAG_PATH )
-sys.path.insert( 0, _Hybird_RAG_PATH)
+_ROOT_PATH = os.path.abspath(__file__)
+for i in range(3):
+    _ROOT_PATH = os.path.dirname( _ROOT_PATH )
+sys.path.insert( 0, _ROOT_PATH)
+from utils import load_data, save_data
 
 metric_cache = dict()
 bert_scorer = None
@@ -37,8 +38,8 @@ def calc_similarity_matrix(tgt_data, pred_data, metric):
                 ret *= calc_data_similarity(tt, pp)
             return ret
 
-        if (tgt, pred) in metric_cache:
-            return metric_cache[(tgt, pred)]
+        if (tgt, pred) in metric_cache[metric]:
+            return metric_cache[metric][(tgt, pred)]
 
         if metric == 'E':
             ret = int(tgt == pred)
@@ -54,7 +55,7 @@ def calc_similarity_matrix(tgt_data, pred_data, metric):
         else:
             raise ValueError(f"Metric cannot be {metric}")
 
-        metric_cache[(tgt, pred)] = ret
+        metric_cache[metric][(tgt, pred)] = ret
         return ret
     
     ret_table = []
@@ -74,8 +75,13 @@ def metrics_by_sim(tgt_data, pred_data, metric):
     对sim这个m*n的值矩阵的行、列求最大值，然后求平均
     每行的字段数=预测的字段数，即所有预测的字段中与label标签的最大值的序列，再平均
     """
-    prec = np.mean(np.max(sim, axis=0))     
-    recall = np.mean(np.max(sim, axis=1))
+    try:
+        prec = np.mean(np.max(sim, axis=0))     
+        recall = np.mean(np.max(sim, axis=1))
+    except ValueError:
+        prec = 1     
+        recall = 1
+
     if prec + recall == 0.0:
         f1 = 0.0
     else:
@@ -101,28 +107,20 @@ def parse_table_to_data( table, col_header):
     return row_set, col_set, table
 
 # （1）路径和形式检查并加载
-def path_check_and_load( dataset, hyp_tgt_pair_name, eval_type ):
-    label_path = os.path.join( _Hybird_RAG_PATH, f"temp/{dataset}/{dataset}_labels.pickle")
-    predict_path = os.path.join( _Hybird_RAG_PATH, f"temp/{dataset}/predicts/{hyp_tgt_pair_name}.pickle")
-    if not os.path.exists( label_path ) or not os.path.exists( predict_path ):
-        raise Exception(f"Labels或Predicts文件至少一个不存在，请检查{hyp_tgt_pair_name}！")
-    with open(label_path, 'rb') as f:  
-        labels = pickle.load(f)
-    with open(predict_path, 'rb') as f:  
-        predicts = pickle.load(f)
-    if len(labels)!=len(predicts):
+def path_check_and_load( dataset, part ):
+    pair_path = os.path.join( _ROOT_PATH, f"Hybird_RAG/evaluation/eval_results/{dataset}_{part}_eval_pair_list.pickle")
+    if not os.path.exists( pair_path ):
+        raise Exception(f"文件不存在，请检查{pair_path}！")
+    eval_pair = load_data( pair_path, "pickle")
+    if len(eval_pair[0])!=len(eval_pair[1]):
         raise Exception( "Label和Predict results列表长度不一致！" )
-    for item in predicts[0]:
-        _len = len(item)        # 获取预测列表中第一个集合中任意一个元组的长度
-    if (_len==2 and eval_type=="multi_entity") or (_len==3 and eval_type=="single_entity"):
-        raise Exception(f"元组长度{_len}与测试类型{eval_type}不匹配!")
-    results_save_path = os.path.join( _Hybird_RAG_PATH, f'evaluation/eval_results/{dataset}_results.json')
+    results_save_path = os.path.join( _ROOT_PATH, f'Hybird_RAG/evaluation/eval_results/{dataset}_results.json')
     # # ( label_dict, predict_dict )
-    return (labels, predicts), results_save_path
+    return eval_pair, results_save_path
 
 
-def main( dataset, unique_name, eval_type):
-    loaded_pair_list, results_save_path = path_check_and_load( dataset, unique_name , eval_type)
+def main( dataset, part, eval_type):
+    loaded_pair_list, results_save_path = path_check_and_load( dataset, part)
 
     row_header_precision = []
     row_header_recall = []
@@ -140,25 +138,32 @@ def main( dataset, unique_name, eval_type):
     resutls_total = {}
     global metric_cache
     for metric in score_s:
+        metric_cache[metric] = {}
         resutls_total[f"Score_{metric}"]={
             "FirstColumn":[],
             "DataCell":[]
         }
         if col_header:
             resutls_total[f"Score_{metric}"]["TableHeader"]=[]
-        for hyp_table, tgt_table in tqdm(loaded_pair_list, total=len(loaded_pair_list[0])):
+        for hyp_table, tgt_table in tqdm(zip( loaded_pair_list[1], loaded_pair_list[0]), total=len(loaded_pair_list[0])):
             #两者都存在，则计算指标
             #返回两个表格的表头、列名和中间关系的set无序数据集
             hyp_row_headers, hyp_col_headers, hyp_relations = parse_table_to_data(hyp_table, col_header)
             tgt_row_headers, tgt_col_headers, tgt_relations = parse_table_to_data(tgt_table, col_header)
 
             if row_header:
-                p, r, f = metrics_by_sim(tgt_row_headers, hyp_row_headers, metric)
+                if len(hyp_table)==0 and len(tgt_table)==0:
+                    p, r, f = 1, 1, 1
+                else:
+                    p, r, f = metrics_by_sim(tgt_row_headers, hyp_row_headers, metric)
                 row_header_precision.append(p)
                 row_header_recall.append(r)
                 row_header_f1.append(f)
             if col_header:
-                p, r, f = metrics_by_sim(tgt_col_headers, hyp_col_headers, metric)
+                if len(hyp_table)==0 and len(tgt_table)==0:
+                    p, r, f = 1, 1, 1
+                else:
+                    p, r, f = metrics_by_sim(tgt_col_headers, hyp_col_headers, metric)
                 col_header_precision.append(p)
                 col_header_recall.append(r)
                 col_header_f1.append(f)
@@ -167,34 +172,37 @@ def main( dataset, unique_name, eval_type):
                 relation_recall.append(0.0)
                 relation_f1.append(0.0)
             else:
-                p, r, f = metrics_by_sim(tgt_relations, hyp_relations, metric)
+                if len(hyp_table)==0 and len(tgt_table)==0:
+                    p, r, f = 1, 1, 1
+                else:
+                    p, r, f = metrics_by_sim(tgt_relations, hyp_relations, metric)
                 relation_precision.append(p)
                 relation_recall.append(r)
                 relation_f1.append(f)
 
-            if row_header:
-                resutls_total[f"Score_{metric}"]["FirstColumn"] = [np.mean(row_header_precision) * 100,
-                                                                   np.mean(row_header_recall) * 100,
-                                                                   np.mean(row_header_f1) * 100]
-                print("Row header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
-                    np.mean(row_header_precision) * 100, np.mean(row_header_recall) * 100, np.mean(row_header_f1) * 100))
-            if col_header:
-                resutls_total[f"Score_{metric}"]["TableHeader"] = [np.mean(col_header_precision) * 100,
-                                                                   np.mean(col_header_recall) * 100,
-                                                                   np.mean(col_header_f1) * 100]
-                print("Col header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
-                    np.mean(col_header_precision) * 100, np.mean(col_header_recall) * 100, np.mean(col_header_f1) * 100))
-            resutls_total[f"Score_{metric}"]["DataCell"] = [np.mean(relation_precision) * 100,
-                                                            np.mean(relation_recall) * 100,
-                                                            np.mean(relation_f1) * 100]
-            print("Non-header cell: precision = %.2f; recall = %.2f; f1 = %.2f" % (
-                np.mean(relation_precision) * 100, np.mean(relation_recall) * 100, np.mean(relation_f1) * 100))
+        if row_header:
+            resutls_total[f"Score_{metric}"]["FirstColumn"] = [np.mean(row_header_precision) * 100,
+                                                                np.mean(row_header_recall) * 100,
+                                                                np.mean(row_header_f1) * 100]
+            print("Row header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+                np.mean(row_header_precision) * 100, np.mean(row_header_recall) * 100, np.mean(row_header_f1) * 100))
+        if col_header:
+            resutls_total[f"Score_{metric}"]["TableHeader"] = [np.mean(col_header_precision) * 100,
+                                                                np.mean(col_header_recall) * 100,
+                                                                np.mean(col_header_f1) * 100]
+            print("Col header: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+                np.mean(col_header_precision) * 100, np.mean(col_header_recall) * 100, np.mean(col_header_f1) * 100))
+        resutls_total[f"Score_{metric}"]["DataCell"] = [np.mean(relation_precision) * 100,
+                                                        np.mean(relation_recall) * 100,
+                                                        np.mean(relation_f1) * 100]
+        print("Non-header cell: precision = %.2f; recall = %.2f; f1 = %.2f" % (
+            np.mean(relation_precision) * 100, np.mean(relation_recall) * 100, np.mean(relation_f1) * 100))
     # 保存eval结果：每个数据集都有一个json结果文件，先读取，再追加，最后写入
     now = datetime.now()
     human_readable_time = now.strftime("%Y-%m-%d %H:%M:%S") 
     with open( results_save_path, encoding='utf-8-sig', mode='r') as f:  
         data = json.load(f)
-    data[ hyp_tgt_pair_name+f"_{human_readable_time}" ] = resutls_total     # 以键值对保存结果
+    data[ f"{dataset}"+f"_{human_readable_time}" ] = resutls_total     # 以键值对保存结果
     with open( results_save_path, encoding='utf-8',mode='w') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
@@ -202,20 +210,19 @@ if __name__=="__main__":
     
     parser = argparse.ArgumentParser(description="Run script with external arguments")
     parser.add_argument('--dataset', type=str, required=True, help='数据集名称')
+    parser.add_argument('--part', type=str, required=True, help='数据集部分，包括datacell与子表')
     parser.add_argument('--eval_type', type=str, required=True, help='single_entity or multi_entity')
-    parser.add_argument('--unique_name', type=str, required=True, help='表示独特性的字符串')
     args = parser.parse_args()
     # 获取参数值
     dataset = args.dataset
     eval_type = args.eval_type
-    unique_name = args.unique_name
-    
+    part = args.part
     """
-    dataset = "prompt_list_rag"
-    eval_type = args.eval_type
-    unique_name = args.unique_name
+    dataset = "rotowire"
+    part = "data_cell_Team" 
+    eval_type = "multi_entity"
     """
-    main( dataset, unique_name, eval_type )
+    main( dataset, part, eval_type )
     
     
     

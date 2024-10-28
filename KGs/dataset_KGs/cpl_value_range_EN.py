@@ -481,7 +481,7 @@ request_class = {
     "total_interest_to_be_returned" : [Thing_class["required_interest_class"]],
     "total_overdue_interest_to_be_returned" : [Thing_class["required_interest_class"]],
     "total_liquidated_damages_to_be_returned" : [Thing_class["required_damages_class"]],
-    "assume_guarantee_responsibility" :[Thing_class["guarantee_liability_class"]],     # 为空则不要求，否则列表形式
+    "assume_guarantee_responsibility" :[Thing_class["guarantee_liability_class"]],
     "debt_realization_costs_before_filing_suit" : Thing_class["debt_realization_costs_class"],
     "debt_realization_costs_after_filing_suit" : Thing_class["debt_realization_costs_class"]
 }
@@ -509,7 +509,7 @@ borrow_class = {
     "agreed_repayment" : [Thing_class["agreed_return_methods_class"]],
     "agreed_guarantee" : [Thing_class["agreed_guarantee_class"]],
     # 交付与还款事实
-    "loan_actual_delivery" : [Thing_class["agreed_guarantee_class"]],  ##lxb##应该是"[loan_actual_delivery_class]"?
+    "loan_actual_delivery" : [Thing_class["agreed_guarantee_class"]],
     "repayment_type" : value_range["repayment_type"],
     "repaid" : [Thing_class["repaid_class"]],
 }

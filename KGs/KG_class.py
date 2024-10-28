@@ -11,11 +11,15 @@ matplotlib.rcParams['font.sans-serif'] = ['SimHei']  # or 'Microsoft YaHei'
 matplotlib.rcParams['axes.unicode_minus'] = False  # Ensures that negative signs display correctly
 
 
+
+
+
 class KnowledgeGraph():
     def __init__(self, schema, language="EN"):
         self.graph = nx.DiGraph()
         self.language = language
         self.domain_intro = schema["intro"]
+        
         self.entity_type_info = schema["entity"]
         self.edge_type_info = schema["relation"]
        # 为方便查找，记录该图中所有同一类型的不同实例的ID
@@ -293,6 +297,15 @@ class KnowledgeGraph():
         return description
 
     # 可视化
+    def visualize_knowledge_graph( self ):
+        pos = nx.spring_layout(self.graph)  # positions for all nodes
+        labels = {node: ', '.join([f"{key}: {data[key]}" for key in data]) for node, data in self.graph.nodes(data=True)}
+        nx.draw(self.graph, pos, labels=labels, with_labels=True, node_color='skyblue', node_size=2000, edge_color='k', linewidths=1, font_size=15)
+        edge_labels = {(u, v): ', '.join([f"{key}: {data[key]}" for key in data if key in ['relationship', 'since']]) for u, v, data in self.graph.edges(data=True)}
+        nx.draw_networkx_edge_labels(self.graph, pos, edge_labels=edge_labels)
+        
+        plt.show()
+
     def visualize_knowledge_graph_interactive(self):
         pos = nx.kamada_kawai_layout(self.graph)
         # For edges
@@ -330,6 +343,18 @@ class KnowledgeGraph():
 class DomainKnowledgeGraph( KnowledgeGraph ):
     def __init__(self, schema, language="EN"):
         super().__init__(schema, language=language)  # 调用父类的构造函数
+        self.entity_type = schema["entity_type"]
+        self.event_type = schema["event_type"]
+    
+    def str_scope( self, scope):
+        if isinstance( scope, list):
+            if self.language == "EN":
+                options = ", ".join(scope)
+            elif self.language == "ZH":
+                options = "，".join(scope)
+            return f"[{options}]"
+        else:
+            return str(scope)
     
     # 查询一个实体类的所有对象的名称，返回以字符串形式
     def get_objects( self, entity ):
@@ -338,7 +363,7 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
         name_ = "Name" if self.language=="EN" else "姓名名称"
         for entity_num in self.instance_num[entity]:
             names.append( self.get_info( query=entity_num, single=True, node=True)[name_]["value"] )
-        if len(names) == 0:
+        if len(names) == 1 and names[0]==None:
             entity_answer = "<NOT FOUND>"
         else:
             if self.language == "ZH":
@@ -348,7 +373,7 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
         return entity_answer
     
     # 迭代，每次返回一个当前实体的属性target_attr, 取值范围scopes, 以及实例在该属性上的真实标签answer 
-    def nested_iterator( self, entity_attr_info):  
+    def nested_iterator( self, entity_attr_info, part_mode):  
         def _recursive_yield(prefix, dicts):  
             for key, value in dicts.items():
                 """传入是字典
@@ -363,7 +388,12 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
                     new_prefix = prefix+f"<SPLIT>{key}" if prefix!="" else key
                     if len(value.keys())==2 and "scope" in value.keys() and "value" in value.keys():   # 触底，返回值
                         answer = value["value"] if value["value"]!=None else "<NOT FOUND>"
-                        yield new_prefix, value["scope"], answer
+                        if part_mode=="all":
+                            yield new_prefix, self.str_scope(value["scope"]), self.str_scope(answer)
+                        elif part_mode=="name" and key in ["Name", "姓名名称"]:
+                            yield new_prefix, self.str_scope(value["scope"]), self.str_scope(answer)
+                        elif part_mode=="cell" and key not in ["Name", "姓名名称"]:
+                            yield new_prefix, self.str_scope(value["scope"]), self.str_scope(answer)
                     else:                                                                           # 字典后面要么为1（可多次的属性类），要么直接是多个键值对
                         yield from _recursive_yield(new_prefix, value)
                 else:
@@ -373,9 +403,12 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
         yield from _recursive_yield("", entity_attr_info)  
     
     # 返回迭代器
-    def get_attr_iter( self, entity_num ):
+    def get_attr_iter( self, entity_num, part_mode ):
+        """
+        part_mode: 指示迭代什么要素，可以all（e2e），name（FirstColumn），cell（DataCell）
+        """
         attr_info = self.graph._node[entity_num]
-        iterator = self.nested_iterator(attr_info) 
+        iterator = self.nested_iterator(attr_info, part_mode) 
         return iterator
     
     def add_from_tuple( self, tuple_list, multi_entity, if_train):
@@ -384,6 +417,8 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
         if multi_entity:        
             for item in tuple_list:
                 if len(item) == 2:
+                    if "）_" in item[0]:
+                        item = ( item[0].split("_")[0], item[1])
                     entity_list.append( item )
                 elif len(item) == 3:
                     attri_relation.append( item )
@@ -403,7 +438,7 @@ class DomainKnowledgeGraph( KnowledgeGraph ):
             if multi_entity:
                 for entity_num in all_nodes.keys():
                     _name = all_nodes[entity_num]["Name"] if self.language=="EN" else all_nodes[entity_num]["姓名名称"]
-                    if _name == name:
+                    if _name["value"] == name:
                         self.update_entity( entity_num, field, field_value)
                         break
             else:

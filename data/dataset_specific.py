@@ -11,6 +11,21 @@ def to_tuple_e2e( excel ):
         for j, filed_name in enumerate(list(excel.columns)):
             value = excel.iloc[i, j]
             if not pd.isna( value ):
+                # 对price range合并为一组
+                if filed_name == "Price range":
+                    if value.lower() == "less than £20":
+                        value = "Cheap"
+                    elif value.lower() == "£20-25":
+                        value = "Moderate"
+                    elif value.lower() == "more than £30":
+                        value = "High"
+                elif filed_name == 'Customer rating':
+                    if value.lower() == "1 out of 5":
+                        value = "Low"
+                    elif value.lower() == "3 out of 5":
+                        value = "Average"
+                    elif value.lower() == "5 out of 5":
+                        value = "High"
                 temp.add( (filed_name, value))
         ret_list.append( temp )
     return ret_list
@@ -36,7 +51,7 @@ def load_e2e( data_dir, load_data ):
 
 def to_tuple_rotowire( excel ):
     ret = {}
-    ret_list = {
+    ret_cell = {
         "Team":[],
         "Player" :[]
     }
@@ -48,25 +63,30 @@ def to_tuple_rotowire( excel ):
     # 处理DataCell
     for i in tqdm( range( len(excel) ), desc="Changing Rotowire data cell into tuple"):
         team, player = excel[i]
-        
+
+        # 依次遍历两张表
         for sheet_name, sheet in zip(["Team", "Player"], [team, player]):
-            temp = set()
+            temp_cell = set()
             temp_first = set()
+            # 遍历表格的所有行
             for p in range( sheet.shape[0] ):
-                name = sheet.iloc[p, 0]
+                name = sheet.iloc[p, 0]                             # 表格每行的第一列都是名称
                 if not pd.isna(name):
-                    temp_first.add( (sheet_name, name))
+                    temp_first.add( (sheet_name, name))             # 加入first column
+                    # 遍历所有表格字段
                     for j, filed_name in enumerate(list(sheet.columns)):
-                        value = sheet.iloc[p, j]
-                        if not pd.isna( value ):
-                            if isinstance(value, (float, np.float64)):
-                                value = int(value)
-                            temp.add( (name, filed_name, value))
+                        if filed_name not in ["Team name", "Name"]: # 非名称加入first column
+                            value = sheet.iloc[p, j]
+                            if not pd.isna( value ):
+                                if isinstance(value, (float, np.float64)):
+                                    value = int(value)
+                                if value!=0:
+                                    temp_cell.add( (name, filed_name, str(value)))
             
-            ret_list[ sheet_name ].append( temp )
+            ret_cell[ sheet_name ].append( temp_cell )
             ret_first[ sheet_name ].append( temp_first )
         
-    ret["DataCell"] = ret_list
+    ret["DataCell"] = ret_cell
     ret["FirstColumn"] = ret_first
     return ret
 
@@ -86,11 +106,14 @@ def load_rotowire( data_dir, load_data ):
         text = load_data( os.path.join( data_dir, f"original/{part}.text"), "text")
         ret[0].extend( text )
         ret[1].extend( data )
-    text_len = len( ret[0] )
+    text_list = []
+    for i in range( len( ret[0] ) ):
+        text_list.append( ret[0][i].replace(" - ",  "-").replace("- ",  "-").replace(" -",  "-") )
+    text_len = len( text_list  )
     table_len = len( ret[1] )
     if text_len != table_len:
         raise Exception( f"Text长度{text_len}与表格长度{table_len}不一致！")
-    return ret[0], to_tuple_rotowire(ret[1])
+    return text_list, to_tuple_rotowire(ret[1])
 
 ################################################# cpl ###############################################################
 
@@ -156,14 +179,19 @@ def to_tuple_cpl( excel ):
         ret_list["DataCell"].append( temp_cell )
     return ret_list
 
-def load_cpl( data_dir, load_data ):
-    table_dir = os.path.join( data_dir, f"original/tables_703.json")
-    text_dir = os.path.join( data_dir, f"original/text_703")
+def load_cpl( data_dir, load_data, version="original"):
+    if version=="original":
+        table_dir = os.path.join( data_dir, f"original/tables_703.json")
+        text_dir = os.path.join( data_dir, f"original/text_703.text")
+    else:
+        table_dir = os.path.join( data_dir, f"original_3_times/tables_676.json")
+        text_dir = os.path.join( data_dir, f"original_3_times/text_676.text")
     tables = load_data( table_dir, "json" )
     texts = load_data( text_dir, "text" )
     
-    text_len = len( tables )
-    table_len = len( texts )
+    text_len = len( texts )
+    table_len = len( tables )
     if text_len != table_len:
         raise Exception( f"Text长度{text_len}与表格长度{table_len}不一致！")
+    
     return texts, to_tuple_cpl(tables)
