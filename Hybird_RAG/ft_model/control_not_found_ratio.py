@@ -53,7 +53,7 @@ def ratio_controller( dataset_name ):
         # ratio_control( "rotowire", "data_cell_Team")          # 50302 / 22022
         # ratio_control( "rotowire", "data_cell_Player")        # 328609 / 76053
     elif dataset_name == "cpl":
-        for part in [ "first_column", "data_cell"]:
+        for part in [ "first_column","data_try_cell"]:     #  
             for subtable_name in ["all"]:
                 part_name = f"{part}_{subtable_name}"
                 ratio_control( dataset_name, part_name )

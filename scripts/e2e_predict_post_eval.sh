@@ -7,7 +7,7 @@ prompt_list_name="all_all"
 offline_online="offline"
 local_api="local"
 model_name="chatglm3-6b-e2e_100000_3_new"
-gpu_list_str="0,1,2,3,4,5"
+gpu_list_str="0,2,3,4,5,6,7"
 sample_little=300
 
 not_process=0                       # 0表示不进行非工程化处理not_process，即要进行后工程处理# 0代表False，court_name_rule=0, --not_process 1

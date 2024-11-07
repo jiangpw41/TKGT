@@ -13,12 +13,31 @@ for i in range(3):
     _ROOT_PATH = os.path.dirname(_ROOT_PATH)
 sys.path.insert(0, _ROOT_PATH)
 from KGs.cores.utils_kg_cores import load_shared, PromptConstructor, get_tables_list
+from KGs.dataset_KGs.cpl import Plaintiff_claim_attributes
 from Hybird_RAG.retriever.Retriver import HybirdRAG_for_Context
+from Hybird_RAG.retriever.cpl_utils import get_ruled_core_cpl
+
+from Hybird_RAG.retriever.vector_retriever import get_ready_vector_index_list
+from Hybird_RAG.retriever.keyword_retriever import Keyword_Retriever
 from utils import load_data, save_data
 from copy import deepcopy
 
-_RAG_MODE =  "rule_based"  #"naive"
+_RAG_MODE =  "rule_based"  #"naive" rule_based, hybird
 
+def filter_ban( tables ):
+    new_table_list = []
+    for i in range(len(tables)):
+        temp = set()
+        for item in tables[i]:
+            if item[1] in Plaintiff_claim_attributes:
+                temp.add( item )
+        new_table_list.append( temp )
+    return new_table_list
+
+def load_hybird( ):
+    retriever_list, ret_index = Keyword_Retriever.get_ready_keyword_index_list()
+    vector_retriever_list = get_ready_vector_index_list( "test")
+    return (retriever_list, vector_retriever_list)
 
 def Prepare_DataCell_Static_For_Objects( dataset_name, mode, subtable_name, entity_list=None):
     """
@@ -29,6 +48,8 @@ def Prepare_DataCell_Static_For_Objects( dataset_name, mode, subtable_name, enti
     kg, datas, ruled_texts, configs = load_shared( dataset_name, mode, subtable_name )      # type: ignore
     texts, tables = datas[0],  get_tables_list( datas[1], part_name = "DataCell", subtable_name= subtable_name )      # 两者为等长的列表，text-table pair
     
+    if dataset_name == "cpl":
+        tables = filter_ban( tables )
     # 如果没有传入的entity_list，说明First和Cell两部分预测是独立的，需要从标签加载先验的entity_list；否则entity_list代表预测结果
     if entity_list == None:
         temp = load_shared( dataset_name, mode, subtable_name, only_data=True )[1]      # type: ignore
@@ -39,12 +60,19 @@ def Prepare_DataCell_Static_For_Objects( dataset_name, mode, subtable_name, enti
     configs["first_column"] = False
     configs["prompt_temp"] = configs["prompt_temps"]["DataCell"]
     _name_ = "Name" if kg.language == "EN" else "姓名名称"
-
+    if _RAG_MODE == "hybird":
+        hybird_retriever = load_hybird()
+    elif _RAG_MODE == "rule_based":
+        ruled_texts = get_ruled_core_cpl( mode)
     # 遍历每个文档
     total_list = []
     for i in tqdm( range( len(texts) ), desc=f"数据集{dataset_name}准备{mode}数据"):
         configs["text"] = texts[i]
-        configs["ruled_text"] = ruled_texts[i] if ruled_texts!=None else None
+        if _RAG_MODE == "rule_based":
+            configs["ruled_text"] = ruled_texts[i] if ruled_texts!=None else None
+        elif _RAG_MODE == "hybird":
+            configs["hybird"] = (hybird_retriever[0][i], hybird_retriever[1][i])
+        configs["index"] = i
         entities = entity_list[i]
         temp_kg = deepcopy( kg )
         if mode == "train":                                 # KG实例化：如果是训练，用两部分真实标签实例化
@@ -94,10 +122,12 @@ def static_event_main( dataset_name ):
             save_data( labels, save_path_labels)
     elif dataset_name == "cpl":
         subtable_name = None
+        """"""
         print(f"开始构建{dataset_name}数据集FirstColumn部分的子表{subtable_name}的Fine-Tuning数据")
         ft_data = Prepare_DataCell_Static_For_Objects( dataset_name, "train", subtable_name )         # len = 251986， List[], 7*35998
         save_path = os.path.join( _ROOT_PATH, f"Hybird_RAG/temp/{dataset_name}/{dataset_name}_data_cell_all_ft.json")
         save_data( ft_data, save_path)
+        
         # Test
         print(f"开始构建{dataset_name}数据集FirstColumn部分的子表{subtable_name}的Test数据对")
         labels, prompts = Prepare_DataCell_Static_For_Objects( dataset_name, "test", subtable_name  )      # 15428, List[List[7]]
@@ -108,4 +138,4 @@ def static_event_main( dataset_name ):
 
 
 if __name__=="__main__":
-    static_event_main( "rotowire" )
+    static_event_main( "cpl" )

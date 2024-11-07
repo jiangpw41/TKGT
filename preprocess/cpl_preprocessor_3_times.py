@@ -9,8 +9,7 @@ _ROOT_PATH = os.path.abspath(__file__)
 for i in range(2):
     _ROOT_PATH = os.path.dirname( _ROOT_PATH )
 sys.path.insert(0, _ROOT_PATH)
-from utils import SingletonLogger, _PUNCATUATION_EN, _PUNCATUATION_ZH, load_data, multi_process, save_data
-from preprocess.functions.file_reader import read_docx
+from utils import SingletonLogger, _PUNCATUATION_EN, _PUNCATUATION_ZH, load_data, multi_process, save_data, read_docx
 from preprocess.CPL_Processor.excel_reader import get_DataCell, get_FirstColumn, get_DataCell_simple
 
 _MODE = "3_times"
@@ -101,7 +100,8 @@ class CPL_Preprocessor():
                 line = text_list[i]
                 line = line.replace(" ", "").replace("\u3000", "").replace("\n\n\n", "\n").replace("\n\n", "\n").replace("\n", "\\n") # 特殊字符串清洗
                 for p in range( len(_PUNCATUATION_EN) ):                                # 英字符转中
-                    line = line.replace(_PUNCATUATION_EN[p], _PUNCATUATION_ZH[p])
+                    if _PUNCATUATION_EN[p] != "." and _PUNCATUATION_EN[p] != ",":
+                        line = line.replace(_PUNCATUATION_EN[p], _PUNCATUATION_ZH[p])
                 file.write(name_list[i]+"###"+line + '\n')                              # 文件名拼接在最前
                 text_list[i] = line
         self.logger.info( f"Have written {count_total} to data/cpl/text successfully !!!!")

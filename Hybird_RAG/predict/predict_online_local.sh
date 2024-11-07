@@ -4,7 +4,7 @@ set -e
 
 offline_online="online"
 local_api="local"
-model_name="chatglm3-6b"
+model_name="chatglm3-6b-cpl_datacell_22"
 gpu_list_str="6"
 
 function getCurScriptFullPath {  

@@ -13,6 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 # Configure matplotlib to use a font that supports Chinese characters
 
 
+
 _PUNCATUATION_EN = [',', '.', ';', '?', '!', '…', ":", '"', '"', "'", "'", "(", ")", ]
 _PUNCATUATION_ZH = ['，', '。', '；', '？', '！', '......', "：",  '“', '”', '‘', '’', '（', '）', '《', '》', '【', '】', '[', ']', '、', "\\n"]
 
@@ -44,7 +45,12 @@ def multi_process( processor, task_list, task_description, *args ):
                 pbar.update(1)
     return splited_task_list, error_reading, count
 
+
+
 def online_local_chat( query, index=0 ):
+    import redis
+    import pickle
+    redis_communication = redis.StrictRedis(host='localhost', port=6379, db=0)
     """将下面两行放置到环境中
     import redis
     import pickle
@@ -76,6 +82,13 @@ def online_local_chat( query, index=0 ):
             return (index, ret)
 
 #####################################################数据加载保存#################################################
+def read_docx(file_path, *args):
+    from docx import Document 
+    doc = Document(file_path)  
+    full_text = []  
+    for para in doc.paragraphs:  
+        full_text.append(para.text)  
+    return '\n'.join(full_text)
 
 def save_data( data, path ):
     type = path.split(".")[-1]

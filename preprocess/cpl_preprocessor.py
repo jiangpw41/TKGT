@@ -9,8 +9,7 @@ _ROOT_PATH = os.path.abspath(__file__)
 for i in range(2):
     _ROOT_PATH = os.path.dirname( _ROOT_PATH )
 sys.path.insert(0, _ROOT_PATH)
-from utils import SingletonLogger, _PUNCATUATION_EN, _PUNCATUATION_ZH, load_data, multi_process
-from preprocess.functions.file_reader import read_docx
+from utils import SingletonLogger, _PUNCATUATION_EN, _PUNCATUATION_ZH, load_data, multi_process, read_docx
 from preprocess.CPL_Processor.excel_reader import get_DataCell, get_FirstColumn
 
 

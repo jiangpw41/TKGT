@@ -18,10 +18,17 @@ def Chinese_text_Cleaner( text, part ):
             text = text.replace( _PUNCATUATION_EN[i], _PUNCATUATION_ZH[i])
     #（2）去除所有非法字符
     # bad_characters.extend( _PUNCATUATION_ZH )
-    if part == "first_column":
+    if part == "first_column_all":
         for character in bad_characters:
             text = text.replace( character, "")
-        return text.split("、")
+        
+        if "、" in text:
+            ret = text.split("、")
+        elif "，" in text:
+            ret = text.split("，")
+        else:
+            ret = text
+        return ret
     else:
         text = text.replace( " ", "")
         return text
@@ -42,17 +49,23 @@ def English_text_Cleaner( text, part ):
         return text.strip()
 
 def split_name( prompt_name ):
-    de = {
-        "(": ")",
-        "（": "）"
-    }
-    for left in de.keys():
-        if left in prompt_name:
-            temp = prompt_name.split( left )[1]
-            if de[left] in temp:
-                return temp.split( de[left] )[0].strip()
-            else:
-                raise Exception(f"括号{left}不匹配！")
+    ret = prompt_name
+    if "法院" in prompt_name:
+        return prompt_name[2:].replace("(", "").replace("（", "").replace(")", "").replace("）", "").strip()
+    elif "原告" in prompt_name or "被告" in prompt_name:
+        return prompt_name[7:].replace("(", "").replace("（", "").replace(")", "").replace("）", "").strip()
+    else:
+        de = {
+            "(": ")",
+            "（": "）"
+        }
+        for left in de.keys():
+            if left in prompt_name:
+                temp = prompt_name.split( left )[1]
+                if de[left] in temp:
+                    return temp.split( de[left] )[0].strip()
+                else:
+                    raise Exception(f"括号{left}不匹配！")
 
 def Get_Fields( dataset_type, option=False):
     if dataset_type == "e2e":

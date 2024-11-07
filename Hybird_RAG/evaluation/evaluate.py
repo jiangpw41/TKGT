@@ -218,8 +218,8 @@ if __name__=="__main__":
     eval_type = args.eval_type
     part = args.part
     """
-    dataset = "rotowire"
-    part = "data_cell_Team" 
+    dataset = "cpl"
+    part = "data_cell_all" 
     eval_type = "multi_entity"
     """
     main( dataset, part, eval_type )

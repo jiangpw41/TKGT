@@ -22,17 +22,42 @@ _Hybird_RAG_PATH = os.path.join( _ROOT_PATH, "Hybird_RAG")
 
 
 
-def post_process_cpl_single( part, predict_list, prompt_list, subtable_name=None ):
+def post_process_cpl_single( part, predict_list, prompt_list, _label ):
     ret_set = set()
-    if part == "first_column":
+    if part == "first_column_all":
         field_list = ["法院", '出借人（原告）', '借款人（被告）']
+        # 长度为3
         for i in range(len(predict_list)):
             field = field_list[i]
             text = predict_list[i]
             text_list = Chinese_text_Cleaner( text, part )
-            for j in range(len(text_list)):
-                ret_set.add( (field, text_list[j]))
+            if isinstance( text_list, list ):
+                for j in range(len(text_list)):
+                    if text_list!="":
+                        ret_set.add( (field, text_list[j]))
+            else:
+                if field == "法院":
+                    if text_list.startswith("合肥市"):
+                        text_list = "安徽省"+text_list
+                    elif text_list=="":
+                        text_list = '浙江省温州市中级人民法院'
+                if text_list!="":
+                    ret_set.add( (field, text_list))
+        # 处理label
+        ret_label = set()   
+        for item in _label:
+            role = item[0].split("_")[0].strip() if "_" in item[0] else item[0].strip()
+            value = item[1].replace("(", "（")
+            value = value.split("（")[0].strip() if "（" in value else value.strip()
+            if value.startswith("合肥市") and role=="法院":
+                value = "安徽省"+value
+            if "，" in value:
+                for value_ in value.split("，"):
+                    ret_label.add( (role, value_.strip()) )
+            else:
+                ret_label.add( (role, value) )
     else:
+        # data_cell
         for i in range(len(prompt_list)):
             prompt = prompt_list[i].split("现在到你实践了：\n    ")[1]
             text = predict_list[i]
@@ -54,16 +79,20 @@ def post_process_cpl_single( part, predict_list, prompt_list, subtable_name=None
             # 清洗输出
             
             text = Chinese_text_Cleaner( text, part )
-            
-            ret_set.add( (prompt_name, prompt_field, text))
+            if not judge_not_found( text.lower() ):
+                ret_set.add( (prompt_name, prompt_field, text))
+
+        ret_label = _label
     
-    return ret_set
+    return ret_set, ret_label
 
 def judge_not_found( text ):
     if text.strip() == "":
         return True
-    elif "not found" in text:
+    elif "not found" in text or "notfound" in text:
         return True
+    else:
+        return False
 
 def remove_the( text ):
     if "the" in text:
@@ -141,7 +170,7 @@ def post_process( dataset_type, part, _predict, _prompt, _label, not_process, su
     if not_process:                                                         # 不进行工程处理则直接返回
         return _predict
     if dataset_type=="cpl":
-        return post_process_cpl_single( part, _predict, _prompt  ), _label
+        return post_process_cpl_single( part, _predict, _prompt, _label )
     elif dataset_type=="e2e":
         return post_process_e2e_single(  _predict, _prompt, _label  )
     elif dataset_type=="rotowire":
@@ -173,7 +202,8 @@ def main( prompt_list_name, dataset_name, not_process, subtable_name, sample_lit
     else:
         print("not_process为False，进行工程后处理")
     length = sample_little if sample_little!=None else len(predict_list)
-    for i in range(  length ):                                                                             # 遍历处理
+    # 遍历处理每个样本
+    for i in range(  length ):                                                                             
         ret_predict, ret_label = post_process( dataset_name, prompt_list_name, predict_list[i], prompt_list[i], label_list[i],  not_process, subtable_name)
         ret_predict_list.append(ret_predict )
         ret_label_list.append(ret_label )
@@ -188,10 +218,12 @@ def main( prompt_list_name, dataset_name, not_process, subtable_name, sample_lit
         from Hybird_RAG.retriever.rotowire_rule import re_process_rotowire_pari
         text_path = os.path.join( _ROOT_PATH, "data/rotowire/test.text")
         re_process_rotowire_pari(text_path, eval_pair_path)
+    """
     elif dataset_name == "cpl":
         from Hybird_RAG.retriever.cpl_rule import re_process_cpl_pari
         text_path = os.path.join( _ROOT_PATH, "data/cpl/test.text")
         re_process_cpl_pari(text_path, eval_pair_path)
+    """
     
     
 
@@ -213,10 +245,11 @@ if __name__=="__main__":
     subtable_name = args.subtable_name if args.subtable_name else None
     sample_little = args.sample_little if args.sample_little else None
     """
-    prompt_list_name = "all_all"   # "all_all"      # "first_column"
-    dataset_name = "e2e"
+
+    dataset_name="cpl"
+    prompt_list_name="data_cell_all"    
     not_process = False
     subtable_name = None
-    sample_little = 300
+    sample_little = None
     """
     main( prompt_list_name, dataset_name, not_process, subtable_name, sample_little )

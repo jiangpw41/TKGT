@@ -91,11 +91,11 @@ if __name__=="__main__":
     sample_little = args.sample_little if args.sample_little else None
     """
     dataset_name = "cpl"         # "e2e"
-    prompt_list_name = "data_cell_all"  # ""all_all
-    offline_online = "offline"
+    prompt_list_name = None #"data_cell_all"  # ""all_all
+    offline_online = "online"
     local_api = "local"
-    model_name = "chatglm3-6b"
-    gpu_list_str = "0,1,2,3,4,5"
-    sample_little = 6
+    model_name = "chatglm3-6b-cpl_datacell_3"
+    gpu_list_str = "6"
+    sample_little = None
     """
     main(  dataset_name, prompt_list_name, model_name, gpu_list_str, offline_online, local_api, sample_little)

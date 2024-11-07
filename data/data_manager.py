@@ -188,6 +188,7 @@ class DataManager():
         return self.load()  # text, table || train, test
 
 if __name__=="__main__":
+    """
     parser = argparse.ArgumentParser(description="Run script with external arguments")
     parser.add_argument('--dataset_name', type=str, required=True, help='数据集名')
     parser.add_argument('--resplit', type=int, required=False, help='是否忽略现有文件重新覆盖生成')     # 1时覆盖
@@ -195,9 +196,9 @@ if __name__=="__main__":
     dataset_name = args.dataset_name
     resplit = False if args.resplit==0 else True
     """
-    dataset_name = "e2e"
+    dataset_name = "cpl"
     resplit = True
-    """
+    
     data_manager = DataManager( dataset_name, resplit = resplit)
     data = data_manager.main()
     print("s")

@@ -24,6 +24,7 @@ def main_cores_all( dataset_name, if_static ):
 
 
 if __name__=="__main__":
+    """
     parser = argparse.ArgumentParser(description="Run script with external arguments")
     parser.add_argument('--dataset_name', type=str, required=True, help='数据集名')
     parser.add_argument('--if_static', type=int, required=True, help='属性是否是固定的，1为固定')
@@ -31,7 +32,7 @@ if __name__=="__main__":
     if_static = False if args.if_static==0 else True
     dataset_name = args.dataset_name
     """
-    dataset_name = "e2e"
+    dataset_name = "cpl"
     if_static = True
-    """
+    
     main_cores_all( dataset_name, if_static )
