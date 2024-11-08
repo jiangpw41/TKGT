@@ -27,13 +27,14 @@ As for the CPL dataset, as the original data involves privacy, we only provide p
 ## "data"
 There are three datasets in table form stored in the "data" directory from total five, and the remaining two (wikibio, wikitabletext) have no limited table fields. For details, please refer to the readme file in the "data" directory.
 
-# Mixed_IE
+# Code example
+## Mixed_IE
 The method of TKGT's first stage, which include paradigms of regulation, statistics, and DL.
 
-# KGs
+## KGs
 The semi-automatically constructed Knowledge Graph of datasets by human experts with the help of Mixed_IE. Based on KGs schema, prepare prompt list and ft data in batch.
 
-# Hybird-RAG
+## Hybird-RAG
 Using
 - rule-based (prior structural knowledge and regular matching) method and 
 - statistics-based (word frequency)
