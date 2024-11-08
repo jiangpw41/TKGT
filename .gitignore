@@ -6,29 +6,28 @@
 **/kg_test.ipynb
 **/result_show.ipynb
 
-Mixed_IE/llm/not_important
-Mixed_IE/llm/main.ipynb
-Mixed_IE/llm/responses_history.py
-Mixed_IE/further_processed/
-Mixed_IE/statistic/Similarity.pdf
+code_example/Mixed_IE/llm/not_important
+code_example/Mixed_IE/llm/main.ipynb
+code_example/Mixed_IE/llm/responses_history.py
+code_example/Mixed_IE/further_processed/
+code_example/Mixed_IE/statistic/Similarity.pdf
 
-Hybird_RAG/predict/LLMInferenceServer/
+code_example/Hybird_RAG/predict/LLMInferenceServer/
+code_example/Hybird_RAG/temp/
 
-Hybird_RAG/temp/
+code_example/Hybird_RAG/retriever/embed_model/
+code_example/Hybird_RAG/retriever/persist_store/
+code_example/Hybird_RAG/retriever/temp/
 
-Hybird_RAG/retriever/embed_model/
-Hybird_RAG/retriever/persist_store/
-Hybird_RAG/retriever/temp/
+code_example/Hybird_RAG/evaluation/result_show.ipynb
+code_example/Hybird_RAG/evaluation/predict_results/
+code_example/Hybird_RAG/evaluation/roberta-large/
+code_example/Hybird_RAG/evaluation/eval_results/
 
-Hybird_RAG/evaluation/result_show.ipynb
-Hybird_RAG/evaluation/predict_results/
-Hybird_RAG/evaluation/roberta-large/
-Hybird_RAG/evaluation/eval_results/
-
-Hybird_RAG/ft_model/cpl/
-Hybird_RAG/ft_model/e2e/
-Hybird_RAG/ft_model/rotowire/
-Hybird_RAG/ft_model/model_list.json
+code_example/Hybird_RAG/ft_model/cpl/
+code_example/Hybird_RAG/ft_model/e2e/
+code_example/Hybird_RAG/ft_model/rotowire/
+code_example/Hybird_RAG/ft_model/model_list.json
 
 
 
@@ -37,4 +36,5 @@ data/cpl/
 data/e2e/
 raw/
 
-preprocess/CPL_Processor/
+code_example/preprocess/CPL_Processor/
+scripts/
