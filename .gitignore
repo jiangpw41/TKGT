@@ -37,4 +37,5 @@ data/e2e/
 raw/
 
 code_example/preprocess/CPL_Processor/
-scripts/
+code_example/scripts/
+code_example/__test/
